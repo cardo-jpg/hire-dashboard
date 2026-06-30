@@ -3,7 +3,7 @@
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <title>Dashboard · Seguidores</title>
+  <title>Dashboard · Seguidores · Hire</title>
   <meta http-equiv="Cache-Control" content="no-cache, no-store, must-revalidate">
   <meta http-equiv="Pragma" content="no-cache">
   <meta http-equiv="Expires" content="0">
@@ -27,6 +27,12 @@
     .badge{display:inline-flex;align-items:center;gap:5px;background:rgba(0,229,160,.08);border:1px solid var(--green);border-radius:20px;padding:4px 12px;font-size:11px;color:var(--green);}
     .dot{width:6px;height:6px;border-radius:50%;background:var(--green);animation:pulse 2s infinite;}
     @keyframes pulse{0%,100%{opacity:1}50%{opacity:.4}}
+    /* TABS */
+    .tabs{background:#0c1828;border-bottom:1px solid var(--border);padding:0 32px;display:flex;}
+    .tab-btn{padding:13px 20px;font-size:13px;font-weight:600;color:var(--sub);cursor:pointer;border:none;border-bottom:2px solid transparent;background:none;transition:all .2s;}
+    .tab-btn:hover{color:var(--text);}
+    .tab-btn.active{color:var(--purple);border-bottom-color:var(--purple);}
+    .tab-panel{display:none;} .tab-panel.active{display:block;}
     .container{max-width:1440px;margin:0 auto;padding:28px 32px;}
     .sec-title{font-size:11px;font-weight:700;color:var(--sub);text-transform:uppercase;letter-spacing:1.5px;margin:28px 0 14px;}
     .kpi-row{display:flex;gap:10px;margin-bottom:24px;overflow-x:auto;padding-bottom:4px;}
@@ -91,85 +97,20 @@
   <div class="h-logo">
     <div class="h-ig">📸</div>
     <div>
-      <div class="h-title">Dashboard · <span id="h-name">Seguidores</span></div>
+      <div class="h-title">Dashboard · <span>Seguidores</span></div>
       <div class="h-sub" id="h-sub">⏳ Carregando dados...</div>
     </div>
   </div>
   <div class="badge"><span class="dot"></span>Ao vivo</div>
 </header>
 
-<div class="container">
-  <p class="sec-title">Resultados da Campanha · Acompanhamento Diário</p>
-  <div class="kpi-row">
-    <div class="kpi k-orange"><p class="kpi-lbl">Investimento</p><p class="kpi-val co" id="d-invest">—</p><p class="kpi-note" id="d-period">período selecionado</p></div>
-    <div class="kpi k-purple"><p class="kpi-lbl">Novos Seguidores</p><p class="kpi-val cv" id="d-seg">—</p><p class="kpi-note">total do período</p></div>
-    <div class="kpi k-cyan"><p class="kpi-lbl">CPS Médio</p><p class="kpi-val cc" id="d-cps">—</p><p class="kpi-note">custo por seguidor</p></div>
-    <div class="kpi k-yellow"><p class="kpi-lbl">Cliques</p><p class="kpi-val cy" id="d-cliques">—</p><p class="kpi-note" id="d-cpc-note">CPC —</p></div>
-    <div class="kpi k-green"><p class="kpi-lbl">Impressões</p><p class="kpi-val cg" id="d-imp">—</p><p class="kpi-note" id="d-cpm-note">CPM —</p></div>
-  </div>
+<div class="tabs" id="tabs"></div>
+<div id="panels"></div>
 
-  <div id="month-filter-bar" class="mf-bar"></div>
-
-  <div class="chart-row">
-    <div class="chart-box">
-      <p class="chart-box-ttl">Novos Seguidores por Dia</p>
-      <p class="chart-box-sub">Linha roxa = seguidores captados · Linha ciano = custo por seguidor (CPS)</p>
-      <div class="cw h280"><canvas id="d-chart1"></canvas></div>
-    </div>
-    <div class="chart-box">
-      <p class="chart-box-ttl">Investimento Diário</p>
-      <p class="chart-box-sub">Linha verde = investimento · Linha laranja = impressões</p>
-      <div class="cw h280"><canvas id="d-chart2"></canvas></div>
-    </div>
-  </div>
-
-  <div class="tbl-box">
-    <div class="tbl-head" style="justify-content:space-between">
-      <span class="tbl-head-title">Rastreamento de Seguidores · Posts Impulsionados</span>
-      <button class="btn-edit-posts" onclick="openPostsModal()">✏️ Gerenciar posts</button>
-    </div>
-    <div class="tbl-scroll">
-      <table>
-        <thead><tr>
-          <th>Post</th>
-          <th class="tr">Seguidores (Total)</th>
-          <th class="tr">Ganho</th>
-          <th class="tr">Investimento</th>
-          <th class="tr">CPS</th>
-          <th>Link</th>
-        </tr></thead>
-        <tbody id="s-tbody"></tbody>
-      </table>
-    </div>
-  </div>
-
-  <div class="tbl-box">
-    <div class="tbl-head" style="justify-content:space-between">
-      <span class="tbl-head-title">Detalhamento por Dia</span>
-      <span style="font-size:10px;color:var(--sub);font-weight:500">planilha · ordem decrescente</span>
-    </div>
-    <div class="tbl-scroll">
-      <table>
-        <thead><tr>
-          <th>Data</th>
-          <th class="tr">Novos Seg.</th>
-          <th class="tr">Investimento</th>
-          <th class="tr">CPS</th>
-          <th class="tr">Cliques</th>
-          <th class="tr">CPC</th>
-          <th class="tr">Impressões</th>
-          <th class="tr">CPM</th>
-        </tr></thead>
-        <tbody id="d-tbody"></tbody>
-      </table>
-    </div>
-  </div>
-</div>
-
-<!-- MODAL POSTS -->
+<!-- MODAL POSTS (compartilhado entre as abas) -->
 <div class="modal-overlay" id="posts-modal">
   <div class="modal-box">
-    <p class="modal-title">✏️ Gerenciar Posts</p>
+    <p class="modal-title" id="modal-title">✏️ Gerenciar Posts</p>
     <div id="post-list"></div>
     <hr class="modal-sep">
     <p class="modal-sub">Adicionar Post</p>
@@ -216,17 +157,14 @@
 
 <script>
 /* ═══════════════════════════════════════════════════════════════
-   CONFIG — troque estes valores pra cada perfil (Hire / Malu)
+   CONFIG — uma dashboard, várias abas. Adicione perfis aqui.
    ═══════════════════════════════════════════════════════════════ */
-const PROFILE_NAME = 'Hire Brazil';       // ← Ex: 'Malu Osowski' ou 'Hire Brazil'
-const SHEET_ID     = '1zFQVcdCqczs5eO9cB8eyii4Tf-kV3qkuYbN-sEB5oBA';
-const DAILY_TAB    = 'HIRE';              // ← nome EXATO da aba diária. Vazio = primeira aba da planilha.
-const POSTS_KEY    = 'hire_posts_v1';     // chave localStorage (única por perfil)
-const SEED_POSTS   = [];                  // posts impulsionados iniciais (opcional)
+const SHEET_ID = '1zFQVcdCqczs5eO9cB8eyii4Tf-kV3qkuYbN-sEB5oBA';
+const PROFILES = [
+  {key:'hire', name:'Hire Brazil',  tab:'HIRE', postsKey:'hire_posts_v1', icon:'🏢'},
+  {key:'malu', name:'Malu Osowski', tab:'MALU', postsKey:'malu_posts_v1', icon:'👤'},
+];
 /* ═══════════════════════════════════════════════════════════════ */
-
-document.getElementById('h-name').textContent = PROFILE_NAME;
-document.title = 'Dashboard · ' + PROFILE_NAME;
 
 const GVT = `https://docs.google.com/spreadsheets/d/${SHEET_ID}/gviz/tq?tqx=out:csv`;
 const C = {cyan:'#00c6ff',green:'#00e5a0',yellow:'#ffd166',red:'#ff6b6b',purple:'#a78bfa',orange:'#f97316',pink:'#f472b6',blue:'#60a5fa',grid:'rgba(30,48,69,0.7)'};
@@ -235,7 +173,7 @@ const R = id => document.getElementById(id);
 const fmtN = n => n>=1e6?(n/1e6).toFixed(1)+'M':n>=1000?(n/1000).toFixed(1)+'k':String(n||0);
 const fmtR = v => 'R$ '+(+v||0).toFixed(2).replace('.',',');
 const money = s => {
-  let v=(s||'').replace(/R\$\s?/g,'').replace(/\s/g,'').replace(/-$/,'').trim();
+  let v=(s||'').replace(/R\$\s?/g,'').replace(/\$/g,'').replace(/\s/g,'').replace(/-$/,'').trim();
   if(v.includes(',')&&v.includes('.'))v=v.replace(/\./g,'').replace(',','.');
   else if(v.includes(','))v=v.replace(',','.');
   return parseFloat(v)||0;
@@ -251,7 +189,6 @@ function parseCSV(txt){
     return hs.reduce((o,h,i)=>{o[h]=v[i]||'';return o;},{});
   });
 }
-// resolve acentos e variações de nome de coluna
 function col(row,...names){
   const norm=s=>s.toLowerCase().normalize('NFD').replace(/[̀-ͯ]/g,'').trim();
   for(const n of names){
@@ -270,15 +207,90 @@ function parseDailyDate(ddmm){
   if(!d||!m||m<1||m>12)return null;
   const year=m>=11?2025:2026;
   const key=`${year}-${String(m).padStart(2,'0')}-${String(d).padStart(2,'0')}`;
-  const mLabel=MS[m-1]+'/'+String(year).slice(2);
   const mKey=`${year}-${String(m).padStart(2,'0')}`;
-  return{year,month:m,day:d,key,label:ddmm,mLabel,mKey};
+  return{year,month:m,day:d,key,label:ddmm,mKey};
+}
+const postName=s=>{const clean=s.replace(/^(Instagram post:|Post do Instagram:|Reel do Instagram:|REELS?|CARROSSEL?|IMAGEM)\s*[-–:]?\s*/i,'').trim();return clean.length>55?clean.substring(0,55)+'…':clean||s.substring(0,55);};
+
+/* estado por perfil */
+const P = {};
+PROFILES.forEach(p=>{P[p.key]={cfg:p,rows:[]};});
+
+/* ── HTML dos componentes (painel por perfil, IDs prefixados) ── */
+function panelHTML(k){
+  return `<div class="container">
+    <p class="sec-title">Resultados da Campanha · Acompanhamento Diário</p>
+    <div class="kpi-row">
+      <div class="kpi k-orange"><p class="kpi-lbl">Investimento</p><p class="kpi-val co" id="${k}-d-invest">—</p><p class="kpi-note">período selecionado</p></div>
+      <div class="kpi k-purple"><p class="kpi-lbl">Novos Seguidores</p><p class="kpi-val cv" id="${k}-d-seg">—</p><p class="kpi-note">total do período</p></div>
+      <div class="kpi k-cyan"><p class="kpi-lbl">CPS Médio</p><p class="kpi-val cc" id="${k}-d-cps">—</p><p class="kpi-note">custo por seguidor</p></div>
+      <div class="kpi k-yellow"><p class="kpi-lbl">Cliques</p><p class="kpi-val cy" id="${k}-d-cliques">—</p><p class="kpi-note" id="${k}-d-cpc-note">CPC —</p></div>
+      <div class="kpi k-green"><p class="kpi-lbl">Impressões</p><p class="kpi-val cg" id="${k}-d-imp">—</p><p class="kpi-note" id="${k}-d-cpm-note">CPM —</p></div>
+    </div>
+    <div id="${k}-month-filter-bar" class="mf-bar"></div>
+    <div class="chart-row">
+      <div class="chart-box">
+        <p class="chart-box-ttl">Novos Seguidores por Dia</p>
+        <p class="chart-box-sub">Linha roxa = seguidores captados · Linha ciano = custo por seguidor (CPS)</p>
+        <div class="cw h280"><canvas id="${k}-d-chart1"></canvas></div>
+      </div>
+      <div class="chart-box">
+        <p class="chart-box-ttl">Investimento Diário</p>
+        <p class="chart-box-sub">Linha verde = investimento · Linha laranja = impressões</p>
+        <div class="cw h280"><canvas id="${k}-d-chart2"></canvas></div>
+      </div>
+    </div>
+    <div class="tbl-box">
+      <div class="tbl-head" style="justify-content:space-between">
+        <span class="tbl-head-title">Rastreamento de Seguidores · Posts Impulsionados</span>
+        <button class="btn-edit-posts" onclick="openPostsModal('${k}')">✏️ Gerenciar posts</button>
+      </div>
+      <div class="tbl-scroll">
+        <table>
+          <thead><tr>
+            <th>Post</th><th class="tr">Seguidores (Total)</th><th class="tr">Ganho</th>
+            <th class="tr">Investimento</th><th class="tr">CPS</th><th>Link</th>
+          </tr></thead>
+          <tbody id="${k}-s-tbody"></tbody>
+        </table>
+      </div>
+    </div>
+    <div class="tbl-box">
+      <div class="tbl-head" style="justify-content:space-between">
+        <span class="tbl-head-title">Detalhamento por Dia</span>
+        <span style="font-size:10px;color:var(--sub);font-weight:500">planilha · ordem decrescente</span>
+      </div>
+      <div class="tbl-scroll">
+        <table>
+          <thead><tr>
+            <th>Data</th><th class="tr">Novos Seg.</th><th class="tr">Investimento</th><th class="tr">CPS</th>
+            <th class="tr">Cliques</th><th class="tr">CPC</th><th class="tr">Impressões</th><th class="tr">CPM</th>
+          </tr></thead>
+          <tbody id="${k}-d-tbody"></tbody>
+        </table>
+      </div>
+    </div>
+  </div>`;
 }
 
-let _allDailyRows=[];
-function renderDailyView(filterMKey){
+/* ── monta abas + painéis ── */
+function buildShell(){
+  R('tabs').innerHTML=PROFILES.map((p,i)=>
+    `<button class="tab-btn ${i===0?'active':''}" onclick="switchTab('${p.key}',this)">${p.icon} ${p.name}</button>`).join('');
+  R('panels').innerHTML=PROFILES.map((p,i)=>
+    `<div id="panel-${p.key}" class="tab-panel ${i===0?'active':''}">${panelHTML(p.key)}</div>`).join('');
+}
+function switchTab(k,b){
+  document.querySelectorAll('.tab-panel').forEach(p=>p.classList.remove('active'));
+  document.querySelectorAll('.tab-btn').forEach(x=>x.classList.remove('active'));
+  R('panel-'+k).classList.add('active'); b.classList.add('active');
+}
+
+/* ── render diário (por perfil) ── */
+function renderDailyView(k,filterMKey){
+  const st=P[k];
   const todayKey=new Date().toISOString().substring(0,10);
-  const base=filterMKey==='all'?_allDailyRows:_allDailyRows.filter(r=>r._pd&&r._pd.mKey===filterMKey);
+  const base=filterMKey==='all'?st.rows:st.rows.filter(r=>r._pd&&r._pd.mKey===filterMKey);
   const rows=base.filter(r=>r._pd&&r._pd.key<=todayKey);
 
   const totInv=rows.reduce((a,r)=>a+r._inv,0);
@@ -289,13 +301,13 @@ function renderDailyView(filterMKey){
   const avgCPC=totClk>0?totInv/totClk:0;
   const avgCPM=totImp>0?totInv/totImp*1000:0;
 
-  R('d-invest').textContent=fmtR(totInv);
-  R('d-seg').textContent=totSeg>0?'+'+fmtN(totSeg):'—';
-  R('d-cps').textContent=avgCPS>0?fmtR(avgCPS):'—';
-  R('d-cliques').textContent=fmtN(totClk);
-  R('d-cpc-note').textContent=avgCPC>0?'CPC '+fmtR(avgCPC):'CPC —';
-  R('d-imp').textContent=fmtN(totImp);
-  R('d-cpm-note').textContent=avgCPM>0?'CPM '+fmtR(avgCPM):'CPM —';
+  R(k+'-d-invest').textContent=fmtR(totInv);
+  R(k+'-d-seg').textContent=totSeg>0?'+'+fmtN(totSeg):'—';
+  R(k+'-d-cps').textContent=avgCPS>0?fmtR(avgCPS):'—';
+  R(k+'-d-cliques').textContent=fmtN(totClk);
+  R(k+'-d-cpc-note').textContent=avgCPC>0?'CPC '+fmtR(avgCPC):'CPC —';
+  R(k+'-d-imp').textContent=fmtN(totImp);
+  R(k+'-d-cpm-note').textContent=avgCPM>0?'CPM '+fmtR(avgCPM):'CPM —';
 
   const labels=rows.map(r=>r._pd.label);
   const segArr=rows.map(r=>r._seg>0?r._seg:null);
@@ -304,31 +316,27 @@ function renderDailyView(filterMKey){
   const impArr=rows.map(r=>r._imp>0?r._imp:null);
   const lineOpts=(color,dash=[])=>({borderColor:color,backgroundColor:'transparent',pointBackgroundColor:color,pointRadius:3,pointHoverRadius:5,borderWidth:2,borderDash:dash,tension:.35,fill:false,spanGaps:true});
 
-  mkChart('d-chart1',{type:'line',data:{labels,datasets:[
+  mkChart(k+'-d-chart1',{type:'line',data:{labels,datasets:[
     {...lineOpts(C.purple,[6,4]),label:'Novos Seguidores',data:segArr,yAxisID:'yA'},
     {...lineOpts(C.cyan,[4,4]),label:'CPS (R$)',data:cpsArr,yAxisID:'yB'},
   ]},options:{responsive:true,maintainAspectRatio:false,
     plugins:{legend:{position:'top',labels:{boxWidth:10,padding:10,font:{size:11},usePointStyle:true}}},
-    scales:{
-      x:{grid:{color:C.grid},ticks:{maxRotation:60,font:{size:9}}},
+    scales:{x:{grid:{color:C.grid},ticks:{maxRotation:60,font:{size:9}}},
       yA:{position:'left',grid:{color:C.grid},title:{display:true,text:'Seguidores',color:C.purple,font:{size:10}}},
-      yB:{position:'right',grid:{drawOnChartArea:false},ticks:{callback:v=>`R$${v}`,color:C.cyan},title:{display:true,text:'CPS',color:C.cyan,font:{size:10}}},
-    }
+      yB:{position:'right',grid:{drawOnChartArea:false},ticks:{callback:v=>`R$${v}`,color:C.cyan},title:{display:true,text:'CPS',color:C.cyan,font:{size:10}}}}
   }});
 
-  mkChart('d-chart2',{type:'line',data:{labels,datasets:[
+  mkChart(k+'-d-chart2',{type:'line',data:{labels,datasets:[
     {...lineOpts(C.green,[6,4]),label:'Investimento (R$)',data:invArr,yAxisID:'yA'},
     {...lineOpts(C.orange,[4,4]),label:'Impressões',data:impArr,yAxisID:'yB'},
   ]},options:{responsive:true,maintainAspectRatio:false,
     plugins:{legend:{position:'top',labels:{boxWidth:10,padding:10,font:{size:11},usePointStyle:true}}},
-    scales:{
-      x:{grid:{color:C.grid},ticks:{maxRotation:60,font:{size:9}}},
+    scales:{x:{grid:{color:C.grid},ticks:{maxRotation:60,font:{size:9}}},
       yA:{position:'left',grid:{color:C.grid},ticks:{callback:v=>`R$${v}`}},
-      yB:{position:'right',grid:{drawOnChartArea:false},ticks:{callback:v=>fmtN(v),color:C.orange}},
-    }
+      yB:{position:'right',grid:{drawOnChartArea:false},ticks:{callback:v=>fmtN(v),color:C.orange}}}
   }});
 
-  R('d-tbody').innerHTML=[...rows].reverse().map(r=>`<tr>
+  R(k+'-d-tbody').innerHTML=[...rows].reverse().map(r=>`<tr>
     <td style="white-space:nowrap;font-weight:600;color:var(--sub)">${r._pd.label}</td>
     <td class="tr" style="color:var(--purple)">${r._seg>0?'+'+r._seg:'—'}</td>
     <td class="tr" style="color:var(--orange)">${r._inv>0?fmtR(r._inv):'—'}</td>
@@ -337,21 +345,46 @@ function renderDailyView(filterMKey){
     <td class="tr" style="color:var(--sub)">${r._cpc>0?fmtR(r._cpc):'—'}</td>
     <td class="tr">${r._imp>0?fmtN(r._imp):'—'}</td>
     <td class="tr" style="color:var(--sub)">${r._cpm>0?fmtR(r._cpm):'—'}</td>
-  </tr>`).join('');
+  </tr>`).join('')||'<tr><td colspan="8" style="text-align:center;color:var(--sub);padding:20px">Sem dados no período</td></tr>';
 }
-window.setDailyMonth=function(mKey,btn){
-  document.querySelectorAll('.mf-btn').forEach(b=>b.classList.remove('active'));
+window.setDailyMonth=function(k,mKey,btn){
+  R(k+'-month-filter-bar').querySelectorAll('.mf-btn').forEach(b=>b.classList.remove('active'));
   btn.classList.add('active');
-  renderDailyView(mKey);
+  renderDailyView(k,mKey);
 };
 
-/* ── POSTS (localStorage) ── */
-function getPosts(){try{const s=localStorage.getItem(POSTS_KEY);return s?JSON.parse(s):[...SEED_POSTS];}catch(e){return[...SEED_POSTS];}}
-function setPosts(p){localStorage.setItem(POSTS_KEY,JSON.stringify(p));}
-let _draft=null;
-function openPostsModal(){_draft=getPosts().map(p=>({...p}));renderPostList();R('posts-modal').classList.add('open');}
-function closePostsModal(){_draft=null;R('posts-modal').classList.remove('open');}
-function saveModal(){setPosts(_draft);_draft=null;renderPostsTable();R('posts-modal').classList.remove('open');}
+function renderImp(k,dailyRows){
+  const st=P[k];
+  st.rows=dailyRows.map(r=>{
+    const pd=parseDailyDate(col(r,'DATA','Data'));
+    const seg=parseInt(col(r,'Novos Seguidores'))||0;
+    const inv=money(col(r,'Investimento diário BRL','Investimento diário','Investimento diario','Investimento'));
+    const clk=parseInt((col(r,'Cliques')||'').replace(/\./g,''))||0;
+    const imp=parseInt((col(r,'Impressões','Impressoes')||'').replace(/\./g,''))||0;
+    const cps=money(col(r,'Custo por novos seguidores'))||(seg>0&&inv>0?inv/seg:0);
+    const cpc=money(col(r,'CPC'))||(clk>0&&inv>0?inv/clk:0);
+    const cpm=money(col(r,'CPM'))||(imp>0&&inv>0?inv/imp*1000:0);
+    return{...r,_pd:pd,_seg:seg,_inv:inv,_cps:cps,_clk:clk,_cpc:cpc,_imp:imp,_cpm:cpm};
+  }).filter(r=>r._pd).sort((a,b)=>a._pd.key.localeCompare(b._pd.key));
+
+  const mKeys=[...new Set(st.rows.filter(r=>r._inv>0||r._seg>0).map(r=>r._pd.mKey))].sort();
+  const bar=R(k+'-month-filter-bar');
+  bar.innerHTML=`<button class="mf-btn" onclick="setDailyMonth('${k}','all',this)">Tudo</button>`+
+    mKeys.map(mk=>{const[y,m]=mk.split('-');const label=MS[+m-1]+'/'+String(+y).slice(2);return`<button class="mf-btn" onclick="setDailyMonth('${k}','${mk}',this)">${label}</button>`;}).join('');
+  const lastMKey=mKeys[mKeys.length-1]||'all';
+  const lastBtn=bar.querySelector(`[onclick*="'${lastMKey}'"]`)||bar.querySelector('.mf-btn');
+  if(lastBtn)lastBtn.classList.add('active');
+  renderDailyView(k,lastMKey||'all');
+  renderPostsTable(k);
+}
+
+/* ── POSTS (localStorage por perfil) ── */
+function getPosts(k){try{const s=localStorage.getItem(P[k].cfg.postsKey);return s?JSON.parse(s):[];}catch(e){return[];}}
+function setPostsLS(k,p){localStorage.setItem(P[k].cfg.postsKey,JSON.stringify(p));}
+let _draft=null,_modalK=null;
+function openPostsModal(k){_modalK=k;_draft=getPosts(k).map(p=>({...p}));R('modal-title').textContent='✏️ Gerenciar Posts · '+P[k].cfg.name;renderPostList();R('posts-modal').classList.add('open');}
+function closePostsModal(){_draft=null;_modalK=null;R('posts-modal').classList.remove('open');}
+function saveModal(){setPostsLS(_modalK,_draft);renderPostsTable(_modalK);closePostsModal();}
 function statusPillHtml(status,clickable,idx){
   const map={ativo:['pill-ativo','Ativo'],inativo:['pill-inativo','Inativo'],subir:['pill-subir','📤 Subir']};
   const[cls,label]=map[status||'ativo']||map['ativo'];
@@ -368,8 +401,7 @@ function renderPostList(){
       return`<div class="post-list-item">
         <div style="flex:1;min-width:0">
           <div style="display:flex;align-items:center;gap:8px;margin-bottom:6px;flex-wrap:wrap">
-            <span class="post-list-name">${shortName}</span>
-            ${statusPillHtml(p.status,true,i)}
+            <span class="post-list-name">${shortName}</span>${statusPillHtml(p.status,true,i)}
           </div>
           <input class="form-input" style="font-size:11px;padding:6px 10px;color:var(--sub)" placeholder="Observação (opcional)..."
             value="${(p.obs||'').replace(/"/g,'&quot;')}" oninput="_draft[${i}].obs=this.value">
@@ -388,19 +420,17 @@ function draftAdd(){
   R('f-nome').value='';R('f-link').value='';R('f-inv').value='';R('f-seg').value='';R('f-dia').value='';R('f-status').value='ativo';
   renderPostList();
 }
-const postName=s=>{const clean=s.replace(/^(Instagram post:|Post do Instagram:|Reel do Instagram:|REELS?|CARROSSEL?|IMAGEM)\s*[-–:]?\s*/i,'').trim();return clean.length>55?clean.substring(0,55)+'…':clean||s.substring(0,55);};
-function renderPostsTable(){
-  const posts=getPosts();
-  if(posts.length===0){R('s-tbody').innerHTML='<tr><td colspan="6" style="text-align:center;color:var(--sub);padding:20px">Nenhum post cadastrado — clique em "✏️ Gerenciar posts"</td></tr>';return;}
-  R('s-tbody').innerHTML=posts.map(p=>{
+function renderPostsTable(k){
+  const posts=getPosts(k);
+  if(posts.length===0){R(k+'-s-tbody').innerHTML='<tr><td colspan="6" style="text-align:center;color:var(--sub);padding:20px">Nenhum post cadastrado — clique em "✏️ Gerenciar posts"</td></tr>';return;}
+  R(k+'-s-tbody').innerHTML=posts.map(p=>{
     const ativo=(p.status||'ativo')==='ativo';
     const cps=p.saldo>0&&p.inv>0?p.inv/p.saldo:0;
     const obsHtml=p.obs?`<br><span style="font-size:10px;color:var(--sub);font-style:italic">${p.obs}</span>`:'';
     return`<tr class="${ativo?'':'inativo'}">
       <td style="max-width:280px">
         <div style="display:flex;align-items:center;gap:6px">
-          <span class="tnm" style="min-width:0;flex:1" title="${p.nome}">${postName(p.nome)}</span>
-          ${statusPillHtml(p.status,false,0)}
+          <span class="tnm" style="min-width:0;flex:1" title="${p.nome}">${postName(p.nome)}</span>${statusPillHtml(p.status,false,0)}
         </div>${obsHtml}
       </td>
       <td class="tr"><strong style="color:var(--purple)">${fmtN(p.saldo)}</strong></td>
@@ -412,46 +442,19 @@ function renderPostsTable(){
   }).join('');
 }
 
-function renderImp(dailyRows){
-  _allDailyRows=dailyRows.map(r=>{
-    const pd=parseDailyDate(col(r,'DATA','Data'));
-    const seg=parseInt(col(r,'Novos Seguidores'))||0;
-    const inv=money(col(r,'Investimento diário BRL','Investimento diário','Investimento diario','Investimento'));
-    const clk=parseInt((col(r,'Cliques')||'').replace(/\./g,''))||0;
-    const imp=parseInt((col(r,'Impressões','Impressoes')||'').replace(/\./g,''))||0;
-    const cps=money(col(r,'Custo por novos seguidores'))||(seg>0&&inv>0?inv/seg:0);
-    const cpc=money(col(r,'CPC'))||(clk>0&&inv>0?inv/clk:0);
-    const cpm=money(col(r,'CPM'))||(imp>0&&inv>0?inv/imp*1000:0);
-    return{...r,_pd:pd,_seg:seg,_inv:inv,_cps:cps,_clk:clk,_cpc:cpc,_imp:imp,_cpm:cpm};
-  }).filter(r=>r._pd).sort((a,b)=>a._pd.key.localeCompare(b._pd.key));
-
-  const mKeys=[...new Set(_allDailyRows.filter(r=>r._inv>0||r._seg>0).map(r=>r._pd.mKey))].sort();
-  const bar=R('month-filter-bar');
-  bar.innerHTML=`<button class="mf-btn" onclick="setDailyMonth('all',this)">Tudo</button>`+
-    mKeys.map(mk=>{const[y,m]=mk.split('-');const label=MS[+m-1]+'/'+String(+y).slice(2);return`<button class="mf-btn" onclick="setDailyMonth('${mk}',this)">${label}</button>`;}).join('');
-  const lastMKey=mKeys[mKeys.length-1]||'all';
-  const lastBtn=bar.querySelector(`[onclick*="${lastMKey}"]`)||bar.querySelector('.mf-btn');
-  if(lastBtn)lastBtn.classList.add('active');
-  renderDailyView(lastMKey||'all');
-  renderPostsTable();
-}
-
+/* ── LOAD (todas as abas em paralelo) ── */
 async function load(){
+  buildShell();
   const ts=Date.now();
-  try{
-    const url=GVT+(DAILY_TAB?`&sheet=${encodeURIComponent(DAILY_TAB)}`:'')+`&_=${ts}`;
-    const dTxt=await fetch(url,{cache:'no-cache'}).then(r=>r.text());
-    const dailyRows=parseCSV(dTxt);
-    renderImp(dailyRows);
-    const actives=_allDailyRows.filter(r=>r._inv>0||r._seg>0);
-    const dMin=actives[0]?._pd?.label||'';
-    const dMax=actives[actives.length-1]?._pd?.label||'';
-    const hora=new Date().toLocaleTimeString('pt-BR',{hour:'2-digit',minute:'2-digit'});
-    R('h-sub').textContent=(dMin?`${dMin} – ${dMax} · `:'')+`Atualizado às ${hora}`;
-  }catch(e){
-    R('h-sub').textContent='⚠ Erro: '+e.message;
-    console.error(e);
-  }
+  await Promise.all(PROFILES.map(async p=>{
+    try{
+      const url=GVT+`&sheet=${encodeURIComponent(p.tab)}&_=${ts}`;
+      const txt=await fetch(url,{cache:'no-cache'}).then(r=>r.text());
+      renderImp(p.key,parseCSV(txt));
+    }catch(e){console.error('Erro',p.key,e);renderPostsTable(p.key);}
+  }));
+  const hora=new Date().toLocaleTimeString('pt-BR',{hour:'2-digit',minute:'2-digit'});
+  R('h-sub').textContent=`${PROFILES.map(p=>p.icon+' '+p.name).join('  ·  ')} · Atualizado às ${hora}`;
 }
 load();
 </script>
