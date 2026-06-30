@@ -322,8 +322,8 @@ function renderDailyView(k,filterMKey){
   ]},options:{responsive:true,maintainAspectRatio:false,
     plugins:{legend:{position:'top',labels:{boxWidth:10,padding:10,font:{size:11},usePointStyle:true}}},
     scales:{x:{grid:{color:C.grid},ticks:{maxRotation:60,font:{size:9}}},
-      yA:{position:'left',grid:{color:C.grid},title:{display:true,text:'Seguidores',color:C.purple,font:{size:10}}},
-      yB:{position:'right',grid:{drawOnChartArea:false},ticks:{callback:v=>`R$${v}`,color:C.cyan},title:{display:true,text:'CPS',color:C.cyan,font:{size:10}}}}
+      yA:{position:'left',grid:{color:C.grid},ticks:{precision:0},title:{display:true,text:'Seguidores',color:C.purple,font:{size:10}}},
+      yB:{position:'right',grid:{drawOnChartArea:false},ticks:{callback:fmtR,color:C.cyan},title:{display:true,text:'CPS',color:C.cyan,font:{size:10}}}}
   }});
 
   mkChart(k+'-d-chart2',{type:'line',data:{labels,datasets:[
@@ -332,7 +332,7 @@ function renderDailyView(k,filterMKey){
   ]},options:{responsive:true,maintainAspectRatio:false,
     plugins:{legend:{position:'top',labels:{boxWidth:10,padding:10,font:{size:11},usePointStyle:true}}},
     scales:{x:{grid:{color:C.grid},ticks:{maxRotation:60,font:{size:9}}},
-      yA:{position:'left',grid:{color:C.grid},ticks:{callback:v=>`R$${v}`}},
+      yA:{position:'left',grid:{color:C.grid},ticks:{callback:fmtR}},
       yB:{position:'right',grid:{drawOnChartArea:false},ticks:{callback:v=>fmtN(v),color:C.orange}}}
   }});
 
