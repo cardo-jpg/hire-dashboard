@@ -294,7 +294,8 @@ function renderDailyView(k,filterMKey){
   const st=P[k];
   const todayKey=new Date().toISOString().substring(0,10);
   const base=filterMKey==='all'?st.rows:st.rows.filter(r=>r._pd&&r._pd.mKey===filterMKey);
-  const rows=base.filter(r=>r._pd&&r._pd.key<=todayKey);
+  // só dias com atividade real (ignora linhas-template vazias do fim/começo da planilha)
+  const rows=base.filter(r=>r._pd&&r._pd.key<=todayKey&&(r._inv>0||r._seg>0||r._clk>0||r._imp>0));
 
   const totInv=rows.reduce((a,r)=>a+r._inv,0);
   const totSeg=rows.reduce((a,r)=>a+r._seg,0);
