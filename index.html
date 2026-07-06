@@ -384,7 +384,18 @@ function setPostsLS(k,p){localStorage.setItem(P[k].cfg.postsKey,JSON.stringify(p
 let _draft=null,_modalK=null;
 function openPostsModal(k){_modalK=k;_draft=getPosts(k).map(p=>({...p}));R('modal-title').textContent='✏️ Gerenciar Posts · '+P[k].cfg.name;renderPostList();R('posts-modal').classList.add('open');}
 function closePostsModal(){_draft=null;_modalK=null;R('posts-modal').classList.remove('open');}
-function saveModal(){setPostsLS(_modalK,_draft);renderPostsTable(_modalK);closePostsModal();}
+function saveModal(){
+  // se o form "Adicionar" estiver preenchido mas não foi adicionado, adiciona antes de salvar
+  if(R('f-nome').value.trim()&&R('f-link').value.trim())draftAdd();
+  setPostsLS(_modalK,_draft);renderPostsTable(_modalK);closePostsModal();
+}
+// setter global — inline handlers não enxergam _draft (let); por isso passam por aqui
+function draftEditField(i,f,v){
+  if(!_draft||!_draft[i])return;
+  if(f==='inv'||f==='dia')_draft[i][f]=parseFloat(v)||0;
+  else if(f==='saldo')_draft[i][f]=parseInt(v)||0;
+  else _draft[i][f]=v;
+}
 function statusPillHtml(status,clickable,idx){
   const map={ativo:['pill-ativo','Ativo'],inativo:['pill-inativo','Inativo'],subir:['pill-subir','📤 Subir']};
   const[cls,label]=map[status||'ativo']||map['ativo'];
@@ -401,25 +412,25 @@ function renderPostList(){
       return`<div class="post-list-item" style="flex-direction:column;align-items:stretch;gap:8px">
         <div style="display:flex;align-items:center;gap:8px">
           <input class="form-input" style="flex:1;font-size:12px;padding:7px 10px" placeholder="Nome do post"
-            value="${esc(p.nome)}" oninput="_draft[${i}].nome=this.value">
+            value="${esc(p.nome)}" oninput="draftEditField(${i},'nome',this.value)">
           ${statusPillHtml(p.status,true,i)}
           <button class="btn-del" onclick="draftDelete(${i})">✕</button>
         </div>
         <input class="form-input" style="font-size:11px;padding:6px 10px;color:var(--cyan)" placeholder="Link do Instagram"
-          value="${esc(p.link)}" oninput="_draft[${i}].link=this.value">
+          value="${esc(p.link)}" oninput="draftEditField(${i},'link',this.value)">
         <div class="form-grid3">
           <div class="form-row" style="margin:0"><label class="form-label">Investido R$</label>
             <input class="form-input" type="number" step="0.01" min="0" style="font-size:11px;padding:6px 10px"
-              value="${p.inv||''}" oninput="_draft[${i}].inv=parseFloat(this.value)||0"></div>
+              value="${p.inv||''}" oninput="draftEditField(${i},'inv',this.value)"></div>
           <div class="form-row" style="margin:0"><label class="form-label">Seguidores</label>
             <input class="form-input" type="number" min="0" style="font-size:11px;padding:6px 10px"
-              value="${p.saldo||''}" oninput="_draft[${i}].saldo=parseInt(this.value)||0"></div>
+              value="${p.saldo||''}" oninput="draftEditField(${i},'saldo',this.value)"></div>
           <div class="form-row" style="margin:0"><label class="form-label">Diário R$</label>
             <input class="form-input" type="number" step="0.01" min="0" style="font-size:11px;padding:6px 10px"
-              value="${p.dia||''}" oninput="_draft[${i}].dia=parseFloat(this.value)||0"></div>
+              value="${p.dia||''}" oninput="draftEditField(${i},'dia',this.value)"></div>
         </div>
         <input class="form-input" style="font-size:11px;padding:6px 10px;color:var(--sub)" placeholder="Observação (opcional)..."
-          value="${esc(p.obs)}" oninput="_draft[${i}].obs=this.value">
+          value="${esc(p.obs)}" oninput="draftEditField(${i},'obs',this.value)">
       </div>`;
     }).join('');
 }
