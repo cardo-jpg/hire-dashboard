@@ -371,10 +371,10 @@ function renderImp(k,dailyRows){
   const bar=R(k+'-month-filter-bar');
   bar.innerHTML=`<button class="mf-btn" onclick="setDailyMonth('${k}','all',this)">Tudo</button>`+
     mKeys.map(mk=>{const[y,m]=mk.split('-');const label=MS[+m-1]+'/'+String(+y).slice(2);return`<button class="mf-btn" onclick="setDailyMonth('${k}','${mk}',this)">${label}</button>`;}).join('');
-  const lastMKey=mKeys[mKeys.length-1]||'all';
-  const lastBtn=bar.querySelector(`[onclick*="'${lastMKey}'"]`)||bar.querySelector('.mf-btn');
-  if(lastBtn)lastBtn.classList.add('active');
-  renderDailyView(k,lastMKey||'all');
+  // default = "Tudo" (mostra todos os meses; assim atualizações de qualquer mês já aparecem)
+  const defBtn=bar.querySelector(`[onclick*="'all'"]`)||bar.querySelector('.mf-btn');
+  if(defBtn)defBtn.classList.add('active');
+  renderDailyView(k,'all');
   renderPostsTable(k);
 }
 
