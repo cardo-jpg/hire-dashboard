@@ -163,6 +163,9 @@ const SHEET_ID = '1zFQVcdCqczs5eO9cB8eyii4Tf-kV3qkuYbN-sEB5oBA';
 const PROFILES = [
   {key:'hire', name:'Hire Brazil',  tab:'HIRE', postsKey:'hire_posts_v1', icon:'🏢'},
   {key:'malu', name:'Malu Osowski', tab:'MALU', postsKey:'malu_posts_v1', icon:'👤'},
+  // HIRE Internacional — confirme o nome EXATO da aba em `tab`. Se a fonte for OUTRA
+  // planilha, adicione `sheetId:'<id da planilha>'` nesta linha.
+  {key:'hireint', name:'HIRE Internacional', tab:'HIRE INTERNACIONAL', postsKey:'hireint_posts_v1', icon:'🌍'},
 ];
 /* ═══════════════════════════════════════════════════════════════ */
 
@@ -472,7 +475,8 @@ async function load(){
   const ts=Date.now();
   await Promise.all(PROFILES.map(async p=>{
     try{
-      const url=GVT+`&sheet=${encodeURIComponent(p.tab)}&_=${ts}`;
+      const sid=p.sheetId||SHEET_ID;
+      const url=`https://docs.google.com/spreadsheets/d/${sid}/gviz/tq?tqx=out:csv&sheet=${encodeURIComponent(p.tab)}&_=${ts}`;
       const txt=await fetch(url,{cache:'no-cache'}).then(r=>r.text());
       renderImp(p.key,parseCSV(txt));
     }catch(e){console.error('Erro',p.key,e);renderPostsTable(p.key);}
