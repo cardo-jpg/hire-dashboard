@@ -157,6 +157,7 @@
     <hr class="modal-sep">
     <div style="display:flex;gap:10px">
       <button class="btn-purple" onclick="saveModal()" style="flex:1;justify-content:center">💾 Salvar</button>
+      <button class="btn-ghost" onclick="copyAllPosts()" title="Copia todos os posts pra mandar pro Cardo publicar (aparece em todo PC)">📋 Copiar p/ publicar</button>
       <button class="btn-ghost" onclick="closePostsModal()">Cancelar</button>
     </div>
   </div>
@@ -410,6 +411,15 @@ function loadSheetPosts(){
 let _draft=null,_modalK=null;
 function openPostsModal(k){_modalK=k;_draft=getPosts(k).map(p=>({...p}));R('modal-title').textContent='✏️ Gerenciar Posts · '+P[k].cfg.name;renderPostList();R('posts-modal').classList.add('open');}
 function closePostsModal(){_draft=null;_modalK=null;R('posts-modal').classList.remove('open');}
+// Copia TODOS os posts (todos os perfis) pra o Cardo publicar no código (fica igual em todo PC, estilo Pati).
+function copyAllPosts(){
+  const all={}; PROFILES.forEach(p=>{ all[p.key]=getPosts(p.key); });
+  const txt=JSON.stringify(all,null,2);
+  navigator.clipboard.writeText(txt).then(
+    ()=>alert('✅ Posts copiados! Cola no chat com o Cardo que ele publica — aí aparecem em todo computador.'),
+    ()=>window.prompt('Copie este texto e mande pro Cardo:', txt)
+  );
+}
 async function saveModal(){
   // se o form "Adicionar" estiver preenchido mas não foi adicionado, adiciona antes de salvar
   if(R('f-nome').value.trim()&&R('f-link').value.trim())draftAdd();
