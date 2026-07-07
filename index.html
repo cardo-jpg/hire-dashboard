@@ -167,6 +167,7 @@
    CONFIG — uma dashboard, várias abas. Adicione perfis aqui.
    ═══════════════════════════════════════════════════════════════ */
 const SHEET_ID = '1zFQVcdCqczs5eO9cB8eyii4Tf-kV3qkuYbN-sEB5oBA';
+const POSTS_API = '';  // ← COLE a URL /exec do Apps Script (posts-backend.gs). Vazio = só localStorage (não compartilha).
 const PROFILES = [
   {key:'hire', name:'Hire Brazil',  tab:'HIRE', postsKey:'hire_posts_v1', icon:'🏢'},
   {key:'malu', name:'Malu Osowski', tab:'MALU', postsKey:'malu_posts_v1', icon:'👤'},
@@ -390,15 +391,33 @@ function renderImp(k,dailyRows){
 }
 
 /* ── POSTS (localStorage por perfil) ── */
-function getPosts(k){try{const s=localStorage.getItem(P[k].cfg.postsKey);return s?JSON.parse(s):[];}catch(e){return[];}}
+function getPosts(k){ if(POSTS_API&&P[k].sheetPosts) return P[k].sheetPosts; try{const s=localStorage.getItem(P[k].cfg.postsKey);return s?JSON.parse(s):[];}catch(e){return[];}}
 function setPostsLS(k,p){localStorage.setItem(P[k].cfg.postsKey,JSON.stringify(p));}
+// Carrega posts do Apps Script (fonte COMPARTILHADA, via JSONP). Cai no localStorage se POSTS_API vazio/falhar.
+function loadSheetPosts(){
+  if(!POSTS_API) return;
+  PROFILES.forEach(p=>{
+    const cb='_pcb_'+p.key+'_'+Date.now();
+    const s=document.createElement('script');
+    const done=()=>{try{delete window[cb];}catch(e){}if(s.parentNode)s.parentNode.removeChild(s);clearTimeout(tm);};
+    const tm=setTimeout(done,12000);
+    window[cb]=(resp)=>{ if(resp&&resp.ok&&Array.isArray(resp.posts)){ P[p.key].sheetPosts=resp.posts.map(x=>({nome:x.nome||'',link:x.link||'',inv:+x.inv||0,dia:+x.dia||0,saldo:+x.saldo||0,status:x.status||'ativo',obs:x.obs||''})); setPostsLS(p.key,P[p.key].sheetPosts); renderPostsTable(p.key); } done(); };
+    s.onerror=done;
+    s.src=POSTS_API+'?profile='+encodeURIComponent(p.key)+'&callback='+cb+'&_='+Date.now();
+    document.head.appendChild(s);
+  });
+}
 let _draft=null,_modalK=null;
 function openPostsModal(k){_modalK=k;_draft=getPosts(k).map(p=>({...p}));R('modal-title').textContent='✏️ Gerenciar Posts · '+P[k].cfg.name;renderPostList();R('posts-modal').classList.add('open');}
 function closePostsModal(){_draft=null;_modalK=null;R('posts-modal').classList.remove('open');}
-function saveModal(){
+async function saveModal(){
   // se o form "Adicionar" estiver preenchido mas não foi adicionado, adiciona antes de salvar
   if(R('f-nome').value.trim()&&R('f-link').value.trim())draftAdd();
-  setPostsLS(_modalK,_draft);renderPostsTable(_modalK);closePostsModal();
+  const k=_modalK, posts=_draft.slice();
+  setPostsLS(k,posts); P[k].sheetPosts=posts;   // cache local + estado
+  renderPostsTable(k); closePostsModal();
+  // sincroniza na planilha (compartilhado entre todos os computadores)
+  if(POSTS_API){ try{ await fetch(POSTS_API,{method:'POST',headers:{'Content-Type':'text/plain;charset=utf-8'},body:JSON.stringify({profile:k,posts})}); }catch(e){console.warn('Falha ao sincronizar posts:',e);} }
 }
 // setter global — inline handlers não enxergam _draft (let); por isso passam por aqui
 function draftEditField(i,f,v){
@@ -489,6 +508,7 @@ async function load(){
       renderImp(p.key,parseCSV(txt));
     }catch(e){console.error('Erro',p.key,e);renderPostsTable(p.key);}
   }));
+  loadSheetPosts();   // posts compartilhados (Apps Script)
   const hora=new Date().toLocaleTimeString('pt-BR',{hour:'2-digit',minute:'2-digit'});
   R('h-sub').textContent=`${PROFILES.map(p=>p.icon+' '+p.name).join('  ·  ')} · Atualizado às ${hora}`;
 }

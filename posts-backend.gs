@@ -25,7 +25,7 @@ function _sheet(){
   let sh = ss.getSheetByName(TAB);
   if(!sh){
     sh = ss.insertSheet(TAB);
-    sh.getRange(1,1,1,6).setValues([['profile','nome','link','inv','dia','saldo']]);
+    sh.getRange(1,1,1,8).setValues([['profile','nome','link','inv','dia','saldo','status','obs']]);
   }
   return sh;
 }
@@ -36,7 +36,7 @@ function _getPosts(profile){
   for(let i=1;i<rows.length;i++){
     const r = rows[i];
     if(!profile || String(r[0]) === profile){
-      out.push({ nome:r[1], link:r[2], inv:Number(r[3])||0, dia:Number(r[4])||0, saldo:Number(r[5])||0 });
+      out.push({ nome:r[1], link:r[2], inv:Number(r[3])||0, dia:Number(r[4])||0, saldo:Number(r[5])||0, status:r[6]||'ativo', obs:r[7]||'' });
     }
   }
   return out;
@@ -64,7 +64,7 @@ function doPost(e){
     if(String(rows[i][0]) === profile) sh.deleteRow(i + 1);
   }
   // grava os novos
-  const add = posts.map(p => [profile, p.nome||'', p.link||'', Number(p.inv)||0, Number(p.dia)||0, Number(p.saldo)||0]);
-  if(add.length) sh.getRange(sh.getLastRow()+1, 1, add.length, 6).setValues(add);
+  const add = posts.map(p => [profile, p.nome||'', p.link||'', Number(p.inv)||0, Number(p.dia)||0, Number(p.saldo)||0, p.status||'ativo', p.obs||'']);
+  if(add.length) sh.getRange(sh.getLastRow()+1, 1, add.length, 8).setValues(add);
   return ContentService.createTextOutput(JSON.stringify({ ok:true })).setMimeType(ContentService.MimeType.JSON);
 }
