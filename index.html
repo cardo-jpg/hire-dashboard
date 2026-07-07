@@ -391,7 +391,7 @@ function renderImp(k,dailyRows){
 }
 
 /* ── POSTS (fonte COMPARTILHADA: aba POSTS da planilha) ── */
-function getPosts(k){ if(P[k].sheetPosts) return P[k].sheetPosts; try{const s=localStorage.getItem(P[k].cfg.postsKey);return s?JSON.parse(s):[];}catch(e){return[];}}
+function getPosts(k){ if(P[k].sheetPosts&&P[k].sheetPosts.length) return P[k].sheetPosts; try{const s=localStorage.getItem(P[k].cfg.postsKey);return s?JSON.parse(s):[];}catch(e){return[];}}
 function setPostsLS(k,p){localStorage.setItem(P[k].cfg.postsKey,JSON.stringify(p));}
 // Lê os posts da aba POSTS da planilha. Colunas: Perfil, Post, Link, Investimento, Seguidores, Diario, Status, Obs.
 async function loadSheetPosts(){
