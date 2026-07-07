@@ -25,6 +25,10 @@
     .h-title span{background:linear-gradient(90deg,var(--purple),var(--pink));-webkit-background-clip:text;-webkit-text-fill-color:transparent;}
     .h-sub{font-size:11px;color:var(--sub);margin-top:2px;}
     .badge{display:inline-flex;align-items:center;gap:5px;background:rgba(0,229,160,.08);border:1px solid var(--green);border-radius:20px;padding:4px 12px;font-size:11px;color:var(--green);}
+    .h-right{display:flex;align-items:center;gap:12px;}
+    .back-btn{display:inline-flex;align-items:center;gap:6px;background:var(--card2);border:1px solid var(--border);border-radius:20px;padding:6px 14px;font-size:12px;font-weight:600;color:var(--text);text-decoration:none;transition:all .15s;white-space:nowrap;}
+    .back-btn:hover{border-color:var(--cyan);color:var(--cyan);}
+    @media (max-width:560px){ header{padding:14px 18px;} .back-btn span.lbl{display:none;} }
     .dot{width:6px;height:6px;border-radius:50%;background:var(--green);animation:pulse 2s infinite;}
     @keyframes pulse{0%,100%{opacity:1}50%{opacity:.4}}
     /* TABS */
@@ -101,7 +105,10 @@
       <div class="h-sub" id="h-sub">⏳ Carregando dados...</div>
     </div>
   </div>
-  <div class="badge"><span class="dot"></span>Ao vivo</div>
+  <div class="h-right">
+    <a href="https://cardo-jpg.github.io/hire-funis-dash/" class="back-btn">← <span class="lbl">Voltar aos Funis</span></a>
+    <div class="badge"><span class="dot"></span>Ao vivo</div>
+  </div>
 </header>
 
 <div class="tabs" id="tabs"></div>
