@@ -167,7 +167,7 @@
    CONFIG — uma dashboard, várias abas. Adicione perfis aqui.
    ═══════════════════════════════════════════════════════════════ */
 const SHEET_ID = '1zFQVcdCqczs5eO9cB8eyii4Tf-kV3qkuYbN-sEB5oBA';
-const POSTS_TAB = 'POSTS';  // aba COMPARTILHADA da planilha com os posts (edite lá → aparece em qualquer PC)
+const POSTS_API = '';  // ← COLE a URL /exec do Apps Script (posts-backend.gs). Vazio = só localStorage (não compartilha).
 const PROFILES = [
   {key:'hire', name:'Hire Brazil',  tab:'HIRE', postsKey:'hire_posts_v1', icon:'🏢'},
   {key:'malu', name:'Malu Osowski', tab:'MALU', postsKey:'malu_posts_v1', icon:'👤'},
@@ -254,7 +254,7 @@ function panelHTML(k){
     <div class="tbl-box">
       <div class="tbl-head" style="justify-content:space-between">
         <span class="tbl-head-title">Rastreamento de Seguidores · Posts Impulsionados</span>
-        <a class="btn-edit-posts" href="https://docs.google.com/spreadsheets/d/${SHEET_ID}/edit" target="_blank" style="text-decoration:none">✏️ Editar posts (aba POSTS)</a>
+        <button class="btn-edit-posts" onclick="openPostsModal('${k}')">✏️ Gerenciar posts</button>
       </div>
       <div class="tbl-scroll">
         <table>
@@ -390,36 +390,34 @@ function renderImp(k,dailyRows){
   renderPostsTable(k);
 }
 
-/* ── POSTS (fonte COMPARTILHADA: aba POSTS da planilha) ── */
-function getPosts(k){ if(P[k].sheetPosts&&P[k].sheetPosts.length) return P[k].sheetPosts; try{const s=localStorage.getItem(P[k].cfg.postsKey);return s?JSON.parse(s):[];}catch(e){return[];}}
+/* ── POSTS (localStorage por perfil) ── */
+function getPosts(k){ if(POSTS_API&&P[k].sheetPosts) return P[k].sheetPosts; try{const s=localStorage.getItem(P[k].cfg.postsKey);return s?JSON.parse(s):[];}catch(e){return[];}}
 function setPostsLS(k,p){localStorage.setItem(P[k].cfg.postsKey,JSON.stringify(p));}
-// Lê os posts da aba POSTS da planilha. Colunas: Perfil, Post, Link, Investimento, Seguidores, Diario, Status, Obs.
-async function loadSheetPosts(){
-  try{
-    const url=`https://docs.google.com/spreadsheets/d/${SHEET_ID}/gviz/tq?tqx=out:csv&sheet=${encodeURIComponent(POSTS_TAB)}&_=${Date.now()}`;
-    const prows=parseCSV(await fetch(url,{cache:'no-cache'}).then(r=>r.text()));
-    const norm=s=>(s||'').trim().toLowerCase();
-    PROFILES.forEach(p=>{P[p.key].sheetPosts=[];});
-    prows.forEach(r=>{
-      const perfil=norm(col(r,'Perfil','PERFIL','Conta'));
-      const prof=PROFILES.find(p=>norm(p.tab)===perfil||norm(p.name)===perfil||norm(p.key)===perfil);
-      const nome=col(r,'Post','Nome','Nome do Post','Criativo');
-      if(!prof||!nome)return;
-      P[prof.key].sheetPosts.push({ nome, link:col(r,'Link','URL'),
-        inv:money(col(r,'Investimento','Investido','Investimento (R$)')),
-        saldo:parseInt(col(r,'Seguidores','Seguidores Ganhos','Ganho'))||0,
-        dia:money(col(r,'Diario','Valor Diario','Valor Diário')),
-        status:norm(col(r,'Status'))||'ativo', obs:col(r,'Obs','Observação','Observacao') });
-    });
-    PROFILES.forEach(p=>renderPostsTable(p.key));
-  }catch(e){ console.warn('Aba POSTS indisponível (usando localStorage):',e); }
+// Carrega posts do Apps Script (fonte COMPARTILHADA, via JSONP). Cai no localStorage se POSTS_API vazio/falhar.
+function loadSheetPosts(){
+  if(!POSTS_API) return;
+  PROFILES.forEach(p=>{
+    const cb='_pcb_'+p.key+'_'+Date.now();
+    const s=document.createElement('script');
+    const done=()=>{try{delete window[cb];}catch(e){}if(s.parentNode)s.parentNode.removeChild(s);clearTimeout(tm);};
+    const tm=setTimeout(done,12000);
+    window[cb]=(resp)=>{ if(resp&&resp.ok&&Array.isArray(resp.posts)){ P[p.key].sheetPosts=resp.posts.map(x=>({nome:x.nome||'',link:x.link||'',inv:+x.inv||0,dia:+x.dia||0,saldo:+x.saldo||0,status:x.status||'ativo',obs:x.obs||''})); setPostsLS(p.key,P[p.key].sheetPosts); renderPostsTable(p.key); } done(); };
+    s.onerror=done;
+    s.src=POSTS_API+'?profile='+encodeURIComponent(p.key)+'&callback='+cb+'&_='+Date.now();
+    document.head.appendChild(s);
+  });
 }
 let _draft=null,_modalK=null;
 function openPostsModal(k){_modalK=k;_draft=getPosts(k).map(p=>({...p}));R('modal-title').textContent='✏️ Gerenciar Posts · '+P[k].cfg.name;renderPostList();R('posts-modal').classList.add('open');}
 function closePostsModal(){_draft=null;_modalK=null;R('posts-modal').classList.remove('open');}
-function saveModal(){
+async function saveModal(){
+  // se o form "Adicionar" estiver preenchido mas não foi adicionado, adiciona antes de salvar
   if(R('f-nome').value.trim()&&R('f-link').value.trim())draftAdd();
-  setPostsLS(_modalK,_draft);renderPostsTable(_modalK);closePostsModal();
+  const k=_modalK, posts=_draft.slice();
+  setPostsLS(k,posts); P[k].sheetPosts=posts;   // cache local + estado
+  renderPostsTable(k); closePostsModal();
+  // sincroniza na planilha (compartilhado entre todos os computadores)
+  if(POSTS_API){ try{ await fetch(POSTS_API,{method:'POST',headers:{'Content-Type':'text/plain;charset=utf-8'},body:JSON.stringify({profile:k,posts})}); }catch(e){console.warn('Falha ao sincronizar posts:',e);} }
 }
 // setter global — inline handlers não enxergam _draft (let); por isso passam por aqui
 function draftEditField(i,f,v){
@@ -478,7 +476,7 @@ function draftAdd(){
 }
 function renderPostsTable(k){
   const posts=getPosts(k);
-  if(posts.length===0){R(k+'-s-tbody').innerHTML='<tr><td colspan="6" style="text-align:center;color:var(--sub);padding:20px">Nenhum post — cadastre na aba <b>POSTS</b> da planilha (aparece em qualquer computador)</td></tr>';return;}
+  if(posts.length===0){R(k+'-s-tbody').innerHTML='<tr><td colspan="6" style="text-align:center;color:var(--sub);padding:20px">Nenhum post cadastrado — clique em "✏️ Gerenciar posts"</td></tr>';return;}
   R(k+'-s-tbody').innerHTML=posts.map(p=>{
     const ativo=(p.status||'ativo')==='ativo';
     const cps=p.saldo>0&&p.inv>0?p.inv/p.saldo:0;
