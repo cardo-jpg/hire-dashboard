@@ -107,6 +107,7 @@
   </div>
   <div class="h-right">
     <a href="https://cardo-jpg.github.io/hire-funis-dash/" class="back-btn">← <span class="lbl">Voltar aos Funis</span></a>
+    <button class="back-btn" onclick="pushAllToCloud()" style="cursor:pointer;font-family:inherit" title="Envia os posts deste navegador pra nuvem (aparece em todo PC)">☁️ <span class="lbl">Enviar pra nuvem</span></button>
     <div class="badge"><span class="dot"></span>Ao vivo</div>
   </div>
 </header>
@@ -394,6 +395,20 @@ function renderImp(k,dailyRows){
 function getPosts(k){ if(POSTS_API&&P[k].sheetPosts&&P[k].sheetPosts.length) return P[k].sheetPosts; try{const s=localStorage.getItem(P[k].cfg.postsKey);return s?JSON.parse(s):[];}catch(e){return[];}}
 function setPostsLS(k,p){localStorage.setItem(P[k].cfg.postsKey,JSON.stringify(p));}
 // Carrega posts do Apps Script (fonte COMPARTILHADA, via JSONP). Cai no localStorage se POSTS_API vazio/falhar.
+// Envia os posts DESTE navegador (localStorage) pra nuvem, com popup de diagnóstico.
+async function pushAllToCloud(){
+  if(!POSTS_API){ alert('Backend não configurado.'); return; }
+  const linhas=[]; let enviados=0;
+  for(const p of PROFILES){
+    let local=[]; try{ local=JSON.parse(localStorage.getItem(p.postsKey)||'[]'); }catch(e){}
+    linhas.push('• '+p.name+': '+local.length+' post(s)');
+    if(local.length){
+      try{ await fetch(POSTS_API,{method:'POST',mode:'no-cors',headers:{'Content-Type':'text/plain;charset=utf-8'},body:JSON.stringify({profile:p.key,posts:local})}); enviados+=local.length; }catch(e){}
+      P[p.key].sheetPosts=local; renderPostsTable(p.key);
+    }
+  }
+  alert('☁️ Enviado pra nuvem:\n'+linhas.join('\n')+'\n\nTotal: '+enviados+' posts.\n\nSe aqui deu 0 em tudo, é porque ESTE navegador não tem os posts (é outro PC). Se deu >0, abra o notebook e atualize que já vai aparecer.');
+}
 function loadSheetPosts(){
   if(!POSTS_API) return;
   PROFILES.forEach(p=>{
@@ -410,7 +425,7 @@ function loadSheetPosts(){
           let local=[]; try{ local=JSON.parse(localStorage.getItem(P[p.key].cfg.postsKey)||'[]'); }catch(e){}
           if(local.length){
             P[p.key].sheetPosts=local; renderPostsTable(p.key);
-            try{ fetch(POSTS_API,{method:'POST',headers:{'Content-Type':'text/plain;charset=utf-8'},body:JSON.stringify({profile:p.key,posts:local})}); }catch(e){}
+            try{ fetch(POSTS_API,{method:'POST',mode:'no-cors',headers:{'Content-Type':'text/plain;charset=utf-8'},body:JSON.stringify({profile:p.key,posts:local})}); }catch(e){}
           } else { P[p.key].sheetPosts=[]; renderPostsTable(p.key); }
         }
       }
@@ -440,7 +455,7 @@ async function saveModal(){
   setPostsLS(k,posts); P[k].sheetPosts=posts;   // cache local + estado
   renderPostsTable(k); closePostsModal();
   // sincroniza na planilha (compartilhado entre todos os computadores)
-  if(POSTS_API){ try{ await fetch(POSTS_API,{method:'POST',headers:{'Content-Type':'text/plain;charset=utf-8'},body:JSON.stringify({profile:k,posts})}); }catch(e){console.warn('Falha ao sincronizar posts:',e);} }
+  if(POSTS_API){ try{ await fetch(POSTS_API,{method:'POST',mode:'no-cors',headers:{'Content-Type':'text/plain;charset=utf-8'},body:JSON.stringify({profile:k,posts})}); }catch(e){console.warn('Falha ao sincronizar posts:',e);} }
 }
 // setter global — inline handlers não enxergam _draft (let); por isso passam por aqui
 function draftEditField(i,f,v){
