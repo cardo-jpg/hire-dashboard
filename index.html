@@ -401,7 +401,21 @@ function loadSheetPosts(){
     const s=document.createElement('script');
     const done=()=>{try{delete window[cb];}catch(e){}if(s.parentNode)s.parentNode.removeChild(s);clearTimeout(tm);};
     const tm=setTimeout(done,12000);
-    window[cb]=(resp)=>{ if(resp&&resp.ok&&Array.isArray(resp.posts)){ P[p.key].sheetPosts=resp.posts.map(x=>({nome:x.nome||'',link:x.link||'',inv:+x.inv||0,dia:+x.dia||0,saldo:+x.saldo||0,status:x.status||'ativo',obs:x.obs||''})); setPostsLS(p.key,P[p.key].sheetPosts); renderPostsTable(p.key); } done(); };
+    window[cb]=(resp)=>{
+      if(resp&&resp.ok&&Array.isArray(resp.posts)){
+        const sheet=resp.posts.map(x=>({nome:x.nome||'',link:x.link||'',inv:+x.inv||0,dia:+x.dia||0,saldo:+x.saldo||0,status:x.status||'ativo',obs:x.obs||''}));
+        if(sheet.length){ P[p.key].sheetPosts=sheet; setPostsLS(p.key,sheet); renderPostsTable(p.key); }
+        else{
+          // backend vazio → migra automaticamente os posts locais pra nuvem (1x)
+          let local=[]; try{ local=JSON.parse(localStorage.getItem(P[p.key].cfg.postsKey)||'[]'); }catch(e){}
+          if(local.length){
+            P[p.key].sheetPosts=local; renderPostsTable(p.key);
+            try{ fetch(POSTS_API,{method:'POST',headers:{'Content-Type':'text/plain;charset=utf-8'},body:JSON.stringify({profile:p.key,posts:local})}); }catch(e){}
+          } else { P[p.key].sheetPosts=[]; renderPostsTable(p.key); }
+        }
+      }
+      done();
+    };
     s.onerror=done;
     s.src=POSTS_API+'?profile='+encodeURIComponent(p.key)+'&callback='+cb+'&_='+Date.now();
     document.head.appendChild(s);
