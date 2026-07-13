@@ -417,24 +417,31 @@ async function pushAllToCloud(){
 // Carrega posts do backend compartilhado (JSONP). Backend vazio → mostra os locais (não grava).
 function loadSheetPosts(){
   if(!POSTS_API) return;
-  PROFILES.forEach(p=>{
-    const cb='_pcb_'+p.key+'_'+Date.now();
-    const s=document.createElement('script');
-    const done=()=>{try{delete window[cb];}catch(e){}if(s.parentNode)s.parentNode.removeChild(s);clearTimeout(tm);};
-    const tm=setTimeout(done,12000);
-    window[cb]=(resp)=>{
-      if(resp&&resp.ok&&Array.isArray(resp.posts)){
-        const sheet=resp.posts.map(x=>({nome:x.nome||'',link:x.link||'',inv:+x.inv||0,dia:+x.dia||0,saldo:+x.saldo||0,status:x.status||'ativo',obs:x.obs||''}));
-        P[p.key].sheetPosts=sheet;
-        if(sheet.length) setPostsLS(p.key,sheet);
-        renderPostsTable(p.key);
-      }
-      done();
-    };
-    s.onerror=done;
-    s.src=POSTS_API+'?profile='+encodeURIComponent(p.key)+'&callback='+cb+'&_='+Date.now();
-    document.head.appendChild(s);
-  });
+  PROFILES.forEach(p=>_loadProfilePosts(p,0));
+}
+// Carrega 1 perfil da nuvem; se falhar (rede/timeout), tenta de novo (até 4 tentativas) pra nunca ficar sem post por engasgo.
+function _loadProfilePosts(p,attempt){
+  const cb='_pcb_'+p.key+'_'+Date.now();
+  const s=document.createElement('script');
+  const done=(ok)=>{
+    try{delete window[cb];}catch(e){}
+    if(s.parentNode)s.parentNode.removeChild(s);
+    clearTimeout(tm);
+    if(!ok&&attempt<3){ setTimeout(()=>_loadProfilePosts(p,attempt+1),1500); }
+  };
+  const tm=setTimeout(()=>done(false),12000);
+  window[cb]=(resp)=>{
+    if(resp&&resp.ok&&Array.isArray(resp.posts)){
+      const sheet=resp.posts.map(x=>({nome:x.nome||'',link:x.link||'',inv:+x.inv||0,dia:+x.dia||0,saldo:+x.saldo||0,status:x.status||'ativo',obs:x.obs||''}));
+      P[p.key].sheetPosts=sheet;
+      if(sheet.length) setPostsLS(p.key,sheet);
+      renderPostsTable(p.key);
+      done(true);
+    } else { done(false); }
+  };
+  s.onerror=()=>done(false);
+  s.src=POSTS_API+'?profile='+encodeURIComponent(p.key)+'&callback='+cb+'&_='+Date.now();
+  document.head.appendChild(s);
 }
 let _draft=null,_modalK=null;
 function openPostsModal(k){_modalK=k;_draft=getPosts(k).map(p=>({...p}));R('modal-title').textContent='✏️ Gerenciar Posts · '+P[k].cfg.name;renderPostList();R('posts-modal').classList.add('open');}
