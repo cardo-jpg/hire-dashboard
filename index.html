@@ -107,7 +107,7 @@
   </div>
   <div class="h-right">
     <a href="https://cardo-jpg.github.io/hire-funis-dash/" class="back-btn">← <span class="lbl">Voltar aos Funis</span></a>
-    <button class="back-btn" onclick="pushAllToCloud()" style="cursor:pointer;font-family:inherit" title="Envia os posts deste navegador pra nuvem (aparece em todo PC)">☁️ <span class="lbl">Enviar pra nuvem</span></button>
+    <span class="back-btn" style="cursor:default;font-family:inherit;opacity:.75" title="Os posts salvam sozinhos no servidor — aparecem em todo computador">☁️ <span class="lbl">Salva automático</span></span>
     <div class="badge"><span class="dot"></span>Ao vivo</div>
   </div>
 </header>
@@ -157,8 +157,8 @@
     </div>
     <hr class="modal-sep">
     <div style="display:flex;gap:10px">
-      <button class="btn-purple" onclick="saveModal()" style="flex:1;justify-content:center">💾 Salvar</button>
-      <button class="btn-ghost" onclick="closePostsModal()">Cancelar</button>
+      <span id="save-status" style="flex:1;font-size:12px;font-weight:700;align-self:center">✓ salvo</span>
+      <button class="btn-purple" onclick="closePostsModal()" style="justify-content:center">✓ Fechar</button>
     </div>
   </div>
 </div>
@@ -168,7 +168,7 @@
    CONFIG — uma dashboard, várias abas. Adicione perfis aqui.
    ═══════════════════════════════════════════════════════════════ */
 const SHEET_ID = '1zFQVcdCqczs5eO9cB8eyii4Tf-kV3qkuYbN-sEB5oBA';
-const POSTS_API = 'https://script.google.com/macros/s/AKfycbykJBdJvoCknUWl3b5sQmfBp45YgmtIDx4QcJLjR4jsAL_784WfBZKW5yNenGVoaOgqNQ/exec';  // Apps Script (posts compartilhados)
+const POSTS_API = 'https://sinapse.cardomarketing.com.br/api/hire-posts';  // servidor (Postgres, fonte única — grava com confirmação)
 const PROFILES = [
   {key:'hire', name:'Hire Brazil',  tab:'HIRE', postsKey:'hire_posts_v1', icon:'🏢'},
   {key:'malu', name:'Malu Osowski', tab:'MALU', postsKey:'malu_posts_v1', icon:'👤'},
@@ -394,58 +394,61 @@ function renderImp(k,dailyRows){
 /* ── POSTS (localStorage por perfil) ── */
 function getPosts(k){ if(POSTS_API&&P[k].sheetPosts&&P[k].sheetPosts.length) return P[k].sheetPosts; try{const s=localStorage.getItem(P[k].cfg.postsKey);return s?JSON.parse(s):[];}catch(e){return[];}}
 function setPostsLS(k,p){localStorage.setItem(P[k].cfg.postsKey,JSON.stringify(p));}
-// Envia os posts DESTE navegador (localStorage) pra nuvem — 1 perfil por vez (serial), evitando corrida.
-let _pushing=false;
-async function pushAllToCloud(){
-  if(_pushing) return;
-  if(!POSTS_API){ alert('Backend não configurado.'); return; }
-  _pushing=true;
-  const sleep=ms=>new Promise(r=>setTimeout(r,ms));
-  const linhas=[]; let enviados=0;
-  for(const p of PROFILES){
-    let local=[]; try{ local=JSON.parse(localStorage.getItem(p.postsKey)||'[]'); }catch(e){}
-    linhas.push('• '+p.name+': '+local.length+' post(s)');
-    if(local.length){
-      try{ await fetch(POSTS_API,{method:'POST',mode:'no-cors',headers:{'Content-Type':'text/plain;charset=utf-8'},body:JSON.stringify({profile:p.key,posts:local})}); enviados+=local.length; }catch(e){}
-      P[p.key].sheetPosts=local; renderPostsTable(p.key);
-      await sleep(2500);   // deixa o backend terminar de gravar antes do próximo perfil
-    }
-  }
-  _pushing=false;
-  alert('☁️ Enviado pra nuvem:\n'+linhas.join('\n')+'\n\nTotal: '+enviados+' posts.\n\nSe deu 0 em tudo, ESTE navegador não tem os posts. Se deu >0, aguarde uns segundos e abra o notebook (Ctrl+Shift+R).');
-}
-// Carrega posts do backend compartilhado (JSONP). Backend vazio → mostra os locais (não grava).
+// Carrega posts do servidor (fonte única). Confirmável via fetch; retry se engasgar.
 function loadSheetPosts(){
   if(!POSTS_API) return;
   PROFILES.forEach(p=>_loadProfilePosts(p,0));
 }
-// Carrega 1 perfil da nuvem; se falhar (rede/timeout), tenta de novo (até 4 tentativas) pra nunca ficar sem post por engasgo.
-function _loadProfilePosts(p,attempt){
-  const cb='_pcb_'+p.key+'_'+Date.now();
-  const s=document.createElement('script');
-  const done=(ok)=>{
-    try{delete window[cb];}catch(e){}
-    if(s.parentNode)s.parentNode.removeChild(s);
-    clearTimeout(tm);
-    if(!ok&&attempt<3){ setTimeout(()=>_loadProfilePosts(p,attempt+1),1500); }
-  };
-  const tm=setTimeout(()=>done(false),12000);
-  window[cb]=(resp)=>{
+async function _loadProfilePosts(p,attempt){
+  try{
+    const r=await fetch(POSTS_API+'?profile='+encodeURIComponent(p.key)+'&_='+Date.now(),{cache:'no-cache'});
+    const resp=await r.json();
     if(resp&&resp.ok&&Array.isArray(resp.posts)){
       const sheet=resp.posts.map(x=>({nome:x.nome||'',link:x.link||'',inv:+x.inv||0,dia:+x.dia||0,saldo:+x.saldo||0,status:x.status||'ativo',obs:x.obs||''}));
       P[p.key].sheetPosts=sheet;
       if(sheet.length) setPostsLS(p.key,sheet);
       renderPostsTable(p.key);
-      done(true);
-    } else { done(false); }
-  };
-  s.onerror=()=>done(false);
-  s.src=POSTS_API+'?profile='+encodeURIComponent(p.key)+'&callback='+cb+'&_='+Date.now();
-  document.head.appendChild(s);
+    } else if(attempt<3){ setTimeout(()=>_loadProfilePosts(p,attempt+1),1500); }
+  }catch(e){ if(attempt<3) setTimeout(()=>_loadProfilePosts(p,attempt+1),1500); }
+}
+
+// ── AUTO-SAVE: mexeu em qualquer campo → salva sozinho no servidor, com
+// confirmação e retry. Sem botão. Salva o estado local na hora (nada se perde) e
+// manda pro servidor com debounce.
+let _saveTimer=null;
+function autoSave(){
+  if(_modalK==null) return;
+  const k=_modalK, posts=_draft.slice();
+  setPostsLS(k,posts); P[k].sheetPosts=posts; renderPostsTable(k);   // local na hora
+  showSaveStatus('salvando');
+  clearTimeout(_saveTimer);
+  _saveTimer=setTimeout(()=>cloudSave(k,posts,0),650);
+}
+async function cloudSave(k,posts,attempt){
+  try{
+    const r=await fetch(POSTS_API,{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({profile:k,posts})});
+    const j=await r.json();
+    if(j&&j.ok) showSaveStatus('salvo'); else throw new Error('resp');
+  }catch(e){
+    if(attempt<5){ showSaveStatus('salvando'); setTimeout(()=>cloudSave(k,posts,attempt+1),1500); }
+    else showSaveStatus('erro');
+  }
+}
+function showSaveStatus(st){
+  const el=document.getElementById('save-status'); if(!el) return;
+  if(st==='salvando'){ el.textContent='● salvando…'; el.style.color='#c9a24a'; }
+  else if(st==='salvo'){ el.textContent='✓ salvo'; el.style.color='#34d399'; }
+  else { el.textContent='⚠ sem conexão — tentando de novo…'; el.style.color='#f0788a'; }
 }
 let _draft=null,_modalK=null;
 function openPostsModal(k){_modalK=k;_draft=getPosts(k).map(p=>({...p}));R('modal-title').textContent='✏️ Gerenciar Posts · '+P[k].cfg.name;renderPostList();R('posts-modal').classList.add('open');}
-function closePostsModal(){_draft=null;_modalK=null;R('posts-modal').classList.remove('open');}
+function closePostsModal(){
+  // se o form "Adicionar" está preenchido mas não foi adicionado, adiciona (dispara auto-save)
+  if(_draft&&R('f-nome').value.trim()&&R('f-link').value.trim())draftAdd();
+  // garante que qualquer gravação pendente (debounce) vá agora, antes de fechar
+  if(_saveTimer&&_modalK!=null){ clearTimeout(_saveTimer); cloudSave(_modalK,_draft.slice(),0); }
+  _draft=null;_modalK=null;R('posts-modal').classList.remove('open');
+}
 // Copia TODOS os posts (todos os perfis) pra o Cardo publicar no código (fica igual em todo PC, estilo Pati).
 function copyAllPosts(){
   const all={}; PROFILES.forEach(p=>{ all[p.key]=getPosts(p.key); });
@@ -455,21 +458,15 @@ function copyAllPosts(){
     ()=>window.prompt('Copie este texto e mande pro Cardo:', txt)
   );
 }
-async function saveModal(){
-  // se o form "Adicionar" estiver preenchido mas não foi adicionado, adiciona antes de salvar
-  if(R('f-nome').value.trim()&&R('f-link').value.trim())draftAdd();
-  const k=_modalK, posts=_draft.slice();
-  setPostsLS(k,posts); P[k].sheetPosts=posts;   // cache local + estado
-  renderPostsTable(k); closePostsModal();
-  // sincroniza na planilha (compartilhado entre todos os computadores)
-  if(POSTS_API){ try{ await fetch(POSTS_API,{method:'POST',mode:'no-cors',headers:{'Content-Type':'text/plain;charset=utf-8'},body:JSON.stringify({profile:k,posts})}); }catch(e){console.warn('Falha ao sincronizar posts:',e);} }
-}
+// Mantida por compatibilidade: agora tudo é auto-save, então "salvar" é só fechar.
+function saveModal(){ closePostsModal(); }   // tudo é auto-save; "salvar" = fechar
 // setter global — inline handlers não enxergam _draft (let); por isso passam por aqui
 function draftEditField(i,f,v){
   if(!_draft||!_draft[i])return;
   if(f==='inv'||f==='dia')_draft[i][f]=parseFloat(v)||0;
   else if(f==='saldo')_draft[i][f]=parseInt(v)||0;
   else _draft[i][f]=v;
+  autoSave();
 }
 function statusPillHtml(status,clickable,idx){
   const map={ativo:['pill-ativo','Ativo'],inativo:['pill-inativo','Inativo'],subir:['pill-subir','📤 Subir']};
@@ -477,7 +474,7 @@ function statusPillHtml(status,clickable,idx){
   const onclick=clickable?`onclick="draftToggle(${idx})" title="Clique para alternar"`:'';
   return`<span class="${cls}" style="font-size:10px;padding:2px 9px;cursor:${clickable?'pointer':'default'}" ${onclick}>${label}</span>`;
 }
-function draftToggle(i){const cycle={ativo:'inativo',inativo:'subir',subir:'ativo'};_draft[i].status=cycle[_draft[i].status||'ativo']||'ativo';renderPostList();}
+function draftToggle(i){const cycle={ativo:'inativo',inativo:'subir',subir:'ativo'};_draft[i].status=cycle[_draft[i].status||'ativo']||'ativo';renderPostList();autoSave();}
 function renderPostList(){
   if(!_draft)return;
   const esc=s=>(s||'').toString().replace(/"/g,'&quot;');
@@ -509,7 +506,7 @@ function renderPostList(){
       </div>`;
     }).join('');
 }
-function draftDelete(i){if(!confirm('Remover este post?'))return;_draft.splice(i,1);renderPostList();}
+function draftDelete(i){if(!confirm('Remover este post?'))return;_draft.splice(i,1);renderPostList();autoSave();}
 function draftAdd(){
   const nome=R('f-nome').value.trim();const link=R('f-link').value.trim();
   if(!nome||!link){alert('Preencha pelo menos nome e link.');return;}
@@ -518,6 +515,7 @@ function draftAdd(){
   _draft.push({nome,link,inv,saldo,dia,status,obs:''});
   R('f-nome').value='';R('f-link').value='';R('f-inv').value='';R('f-seg').value='';R('f-dia').value='';R('f-status').value='ativo';
   renderPostList();
+  autoSave();
 }
 function renderPostsTable(k){
   const posts=getPosts(k);
