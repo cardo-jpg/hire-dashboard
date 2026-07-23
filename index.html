@@ -57,6 +57,13 @@
     .tbl-box{background:var(--card);border:1px solid var(--border);border-radius:12px;overflow:hidden;margin-bottom:24px;}
     .tbl-head{background:var(--card2);padding:14px 20px;display:flex;align-items:center;justify-content:space-between;}
     .tbl-head-title{font-size:12px;font-weight:700;}
+    .pfilter{display:inline-flex;gap:4px;background:rgba(255,255,255,.04);border:1px solid var(--border);border-radius:20px;padding:3px;}
+    .pfilter button{background:transparent;border:none;color:var(--sub);font-family:inherit;font-size:10.5px;font-weight:700;padding:4px 11px;border-radius:16px;cursor:pointer;transition:.15s;white-space:nowrap;}
+    .pfilter button:hover{color:#fff;}
+    .pfilter button.on{background:rgba(167,139,250,.18);color:#a78bfa;}
+    .pfilter button.on[data-f="ativo"]{background:rgba(0,229,160,.14);color:var(--green);}
+    .pfilter button.on[data-f="inativo"]{background:rgba(255,107,107,.14);color:var(--red);}
+    .pf-empty{text-align:center;color:var(--sub);font-size:12px;padding:22px;}
     .tbl-scroll{overflow-x:auto;}
     table{width:100%;border-collapse:collapse;}
     th{background:var(--card2);font-size:10px;font-weight:700;color:var(--sub);text-transform:uppercase;letter-spacing:.8px;padding:9px 14px;text-align:left;white-space:nowrap;}
@@ -255,7 +262,15 @@ function panelHTML(k){
     <div class="tbl-box">
       <div class="tbl-head" style="justify-content:space-between">
         <span class="tbl-head-title">Rastreamento de Seguidores · Posts Impulsionados</span>
-        <button class="btn-edit-posts" onclick="openPostsModal('${k}')">✏️ Gerenciar posts</button>
+        <div style="display:flex;align-items:center;gap:10px;flex-wrap:wrap">
+          <div class="pfilter" id="${k}-pfilter">
+            <button data-f="todos" class="on" onclick="setPostFilter('${k}','todos')">Todos <span id="${k}-pf-c-todos"></span></button>
+            <button data-f="ativo" onclick="setPostFilter('${k}','ativo')">Ativos <span id="${k}-pf-c-ativo"></span></button>
+            <button data-f="inativo" onclick="setPostFilter('${k}','inativo')">Inativos <span id="${k}-pf-c-inativo"></span></button>
+            <button data-f="subir" onclick="setPostFilter('${k}','subir')">Subir <span id="${k}-pf-c-subir"></span></button>
+          </div>
+          <button class="btn-edit-posts" onclick="openPostsModal('${k}')">✏️ Gerenciar posts</button>
+        </div>
       </div>
       <div class="tbl-scroll">
         <table>
@@ -517,9 +532,24 @@ function draftAdd(){
   renderPostList();
   autoSave();
 }
+// Filtro de status por perfil (todos | ativo | inativo | subir)
+const _postFilter={};
+function setPostFilter(k,f){
+  _postFilter[k]=f;
+  document.querySelectorAll('#'+k+'-pfilter button').forEach(b=>b.classList.toggle('on', b.dataset.f===f));
+  renderPostsTable(k);
+}
 function renderPostsTable(k){
-  const posts=getPosts(k);
-  if(posts.length===0){R(k+'-s-tbody').innerHTML='<tr><td colspan="6" style="text-align:center;color:var(--sub);padding:20px">Nenhum post cadastrado — clique em "✏️ Gerenciar posts"</td></tr>';return;}
+  const all=getPosts(k);
+  const st=p=>(p.status||'ativo');
+  // contadores nos botões
+  const cnt={todos:all.length,ativo:0,inativo:0,subir:0};
+  all.forEach(p=>{ const s=st(p); if(cnt[s]!==undefined) cnt[s]++; });
+  ['todos','ativo','inativo','subir'].forEach(x=>{ const el=document.getElementById(k+'-pf-c-'+x); if(el) el.textContent='('+cnt[x]+')'; });
+  if(all.length===0){R(k+'-s-tbody').innerHTML='<tr><td colspan="6" style="text-align:center;color:var(--sub);padding:20px">Nenhum post cadastrado — clique em "✏️ Gerenciar posts"</td></tr>';return;}
+  const f=_postFilter[k]||'todos';
+  const posts = f==='todos' ? all : all.filter(p=>st(p)===f);
+  if(posts.length===0){R(k+'-s-tbody').innerHTML='<tr><td colspan="6" class="pf-empty">Nenhum post com esse status.</td></tr>';return;}
   R(k+'-s-tbody').innerHTML=posts.map(p=>{
     const ativo=(p.status||'ativo')==='ativo';
     const cps=p.saldo>0&&p.inv>0?p.inv/p.saldo:0;
