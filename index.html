@@ -84,6 +84,9 @@
     .dr-inp:hover{border-color:var(--purple);}
     .dr-clear{padding:5px 11px;font-size:11px;font-weight:600;color:var(--sub);background:var(--card);border:1px solid var(--border);border-radius:20px;cursor:pointer;}
     .dr-clear:hover{color:var(--text);border-color:var(--purple);}
+    th.sortable{cursor:pointer;user-select:none;transition:color .12s;}
+    th.sortable:hover{color:var(--purple);}
+    th .sar{font-size:9px;opacity:.9;color:var(--purple);}
     .modal-overlay{display:none;position:fixed;inset:0;background:rgba(0,0,0,.75);z-index:1000;align-items:center;justify-content:center;}
     .modal-overlay.open{display:flex;}
     .modal-box{background:var(--card);border:1px solid var(--border);border-radius:16px;padding:28px;width:560px;max-width:95vw;max-height:90vh;overflow-y:auto;}
@@ -299,13 +302,19 @@ function panelHTML(k){
     <div class="tbl-box">
       <div class="tbl-head" style="justify-content:space-between">
         <span class="tbl-head-title">Detalhamento por Dia</span>
-        <span style="font-size:10px;color:var(--sub);font-weight:500">planilha · ordem decrescente</span>
+        <span style="font-size:10px;color:var(--sub);font-weight:500">clique nas colunas p/ ordenar</span>
       </div>
       <div class="tbl-scroll">
         <table>
           <thead><tr>
-            <th>Data</th><th class="tr">Novos Seg.</th><th class="tr">Investimento</th><th class="tr">CPS</th>
-            <th class="tr">Cliques</th><th class="tr">CPC</th><th class="tr">Impressões</th><th class="tr">CPM</th>
+            <th class="sortable" data-sk="date" onclick="sortDaily('${k}','date')">Data <span class="sar"></span></th>
+            <th class="tr sortable" data-sk="seg" onclick="sortDaily('${k}','seg')">Novos Seg. <span class="sar"></span></th>
+            <th class="tr sortable" data-sk="inv" onclick="sortDaily('${k}','inv')">Investimento <span class="sar"></span></th>
+            <th class="tr sortable" data-sk="cps" onclick="sortDaily('${k}','cps')">CPS <span class="sar"></span></th>
+            <th class="tr sortable" data-sk="clk" onclick="sortDaily('${k}','clk')">Cliques <span class="sar"></span></th>
+            <th class="tr sortable" data-sk="cpc" onclick="sortDaily('${k}','cpc')">CPC <span class="sar"></span></th>
+            <th class="tr sortable" data-sk="imp" onclick="sortDaily('${k}','imp')">Impressões <span class="sar"></span></th>
+            <th class="tr sortable" data-sk="cpm" onclick="sortDaily('${k}','cpm')">CPM <span class="sar"></span></th>
           </tr></thead>
           <tbody id="${k}-d-tbody"></tbody>
         </table>
@@ -384,7 +393,11 @@ function renderDailyView(k,filterMKey){
       yB:{position:'right',grid:{drawOnChartArea:false},ticks:{callback:v=>fmtN(v),color:C.orange,maxTicksLimit:6}}}
   }});
 
-  R(k+'-d-tbody').innerHTML=[...rows].reverse().map(r=>`<tr>
+  P[k]._dailyRows=rows; renderDailyTable(k);   // tabela ordenável por coluna
+}
+
+const _dVal=(r,key)=>key==='date'?r._pd.key:(key==='seg'?r._seg:key==='inv'?r._inv:key==='cps'?r._cps:key==='clk'?r._clk:key==='cpc'?r._cpc:key==='imp'?r._imp:r._cpm);
+const _dRow=r=>`<tr>
     <td style="white-space:nowrap;font-weight:600;color:var(--sub)">${r._pd.label}</td>
     <td class="tr" style="color:var(--purple)">${r._seg>0?'+'+r._seg:'—'}</td>
     <td class="tr" style="color:var(--orange)">${r._inv>0?fmtR(r._inv):'—'}</td>
@@ -393,8 +406,20 @@ function renderDailyView(k,filterMKey){
     <td class="tr" style="color:var(--sub)">${r._cpc>0?fmtR(r._cpc):'—'}</td>
     <td class="tr">${r._imp>0?fmtN(r._imp):'—'}</td>
     <td class="tr" style="color:var(--sub)">${r._cpm>0?fmtR(r._cpm):'—'}</td>
-  </tr>`).join('')||'<tr><td colspan="8" style="text-align:center;color:var(--sub);padding:20px">Sem dados no período</td></tr>';
+  </tr>`;
+function renderDailyTable(k){
+  const st=P[k], so=st._dailySort||(st._dailySort={key:'date',dir:-1});
+  const rows=[...(st._dailyRows||[])].sort((a,b)=>{const va=_dVal(a,so.key),vb=_dVal(b,so.key);
+    return so.key==='date'?so.dir*String(va).localeCompare(String(vb)):so.dir*((va||0)-(vb||0));});
+  R(k+'-d-tbody').innerHTML=rows.map(_dRow).join('')||'<tr><td colspan="8" style="text-align:center;color:var(--sub);padding:20px">Sem dados no período</td></tr>';
+  document.querySelectorAll('#panel-'+k+' th.sortable[data-sk]').forEach(th=>{
+    const s=th.querySelector('.sar'); if(s) s.textContent=(th.dataset.sk===so.key)?(so.dir<0?'▼':'▲'):'';});
 }
+window.sortDaily=function(k,key){
+  const st=P[k], so=st._dailySort||(st._dailySort={key:'date',dir:-1});
+  if(so.key===key)so.dir=-so.dir; else {so.key=key;so.dir=-1;}
+  renderDailyTable(k);
+};
 window.setDailyMonth=function(k,mKey,btn){
   P[k]._dfStart=P[k]._dfEnd=null;                        // clicar num mês limpa o De/Até
   const s=R(k+'-df-start'),e=R(k+'-df-end'),c=R(k+'-df-clear');
