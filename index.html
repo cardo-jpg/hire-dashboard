@@ -77,6 +77,13 @@
     .mf-btn{padding:5px 13px;font-size:11px;font-weight:600;color:var(--sub);background:var(--card);border:1px solid var(--border);border-radius:20px;cursor:pointer;transition:all .15s;}
     .mf-btn:hover{color:var(--text);border-color:var(--purple);}
     .mf-btn.active{background:rgba(167,139,250,.15);color:var(--purple);border-color:var(--purple);}
+    .dr-bar{display:flex;align-items:center;gap:8px;flex-wrap:wrap;margin:-8px 0 20px;}
+    .dr-lbl{font-size:11px;font-weight:600;color:var(--sub);}
+    .dr-sep{font-size:11px;color:var(--sub);}
+    .dr-inp{background:var(--card);border:1px solid var(--border);border-radius:8px;color:var(--text);padding:5px 9px;font-size:11px;color-scheme:dark;cursor:pointer;}
+    .dr-inp:hover{border-color:var(--purple);}
+    .dr-clear{padding:5px 11px;font-size:11px;font-weight:600;color:var(--sub);background:var(--card);border:1px solid var(--border);border-radius:20px;cursor:pointer;}
+    .dr-clear:hover{color:var(--text);border-color:var(--purple);}
     .modal-overlay{display:none;position:fixed;inset:0;background:rgba(0,0,0,.75);z-index:1000;align-items:center;justify-content:center;}
     .modal-overlay.open{display:flex;}
     .modal-box{background:var(--card);border:1px solid var(--border);border-radius:16px;padding:28px;width:560px;max-width:95vw;max-height:90vh;overflow-y:auto;}
@@ -247,6 +254,13 @@ function panelHTML(k){
       <div class="kpi k-green"><p class="kpi-lbl">Impressões</p><p class="kpi-val cg" id="${k}-d-imp">—</p><p class="kpi-note" id="${k}-d-cpm-note">CPM —</p></div>
     </div>
     <div id="${k}-month-filter-bar" class="mf-bar"></div>
+    <div class="dr-bar">
+      <span class="dr-lbl">📅 Período:</span>
+      <input type="date" id="${k}-df-start" class="dr-inp" onchange="onDailyRange('${k}')">
+      <span class="dr-sep">até</span>
+      <input type="date" id="${k}-df-end" class="dr-inp" onchange="onDailyRange('${k}')">
+      <button class="dr-clear" id="${k}-df-clear" onclick="clearDailyRange('${k}')" style="display:none">✕ limpar</button>
+    </div>
     <div class="chart-row">
       <div class="chart-box">
         <p class="chart-box-ttl">Novos Seguidores por Dia</p>
@@ -317,7 +331,13 @@ function switchTab(k,b){
 function renderDailyView(k,filterMKey){
   const st=P[k];
   const todayKey=new Date().toISOString().substring(0,10);
-  const base=filterMKey==='all'?st.rows:st.rows.filter(r=>r._pd&&r._pd.mKey===filterMKey);
+  const a=st._dfStart,b=st._dfEnd;   // filtro De/Até por perfil (prioridade sobre o mês)
+  let base;
+  if(a||b){
+    base=st.rows.filter(r=>r._pd&&(!a||r._pd.key>=a)&&(!b||r._pd.key<=b));
+  }else{
+    base=filterMKey==='all'?st.rows:st.rows.filter(r=>r._pd&&r._pd.mKey===filterMKey);
+  }
   // só dias com atividade real (ignora linhas-template vazias do fim/começo da planilha)
   const rows=base.filter(r=>r._pd&&r._pd.key<=todayKey&&(r._inv>0||r._seg>0||r._clk>0||r._imp>0));
 
@@ -376,9 +396,28 @@ function renderDailyView(k,filterMKey){
   </tr>`).join('')||'<tr><td colspan="8" style="text-align:center;color:var(--sub);padding:20px">Sem dados no período</td></tr>';
 }
 window.setDailyMonth=function(k,mKey,btn){
+  P[k]._dfStart=P[k]._dfEnd=null;                        // clicar num mês limpa o De/Até
+  const s=R(k+'-df-start'),e=R(k+'-df-end'),c=R(k+'-df-clear');
+  if(s)s.value='';if(e)e.value='';if(c)c.style.display='none';
   R(k+'-month-filter-bar').querySelectorAll('.mf-btn').forEach(b=>b.classList.remove('active'));
   btn.classList.add('active');
   renderDailyView(k,mKey);
+};
+window.onDailyRange=function(k){
+  let a=R(k+'-df-start').value||null,b=R(k+'-df-end').value||null;
+  if(a&&b&&a>b){const t=a;a=b;b=t;R(k+'-df-start').value=a;R(k+'-df-end').value=b;}
+  P[k]._dfStart=a;P[k]._dfEnd=b;
+  R(k+'-month-filter-bar').querySelectorAll('.mf-btn').forEach(x=>x.classList.remove('active'));
+  R(k+'-df-clear').style.display=(a||b)?'':'none';
+  renderDailyView(k,'all');
+};
+window.clearDailyRange=function(k){
+  P[k]._dfStart=P[k]._dfEnd=null;
+  R(k+'-df-start').value='';R(k+'-df-end').value='';R(k+'-df-clear').style.display='none';
+  const bar=R(k+'-month-filter-bar');bar.querySelectorAll('.mf-btn').forEach(x=>x.classList.remove('active'));
+  const all=bar.querySelector(`[onclick*="'all'"]`)||bar.querySelector('.mf-btn');
+  if(all)all.classList.add('active');
+  renderDailyView(k,'all');
 };
 
 function renderImp(k,dailyRows){
@@ -399,6 +438,10 @@ function renderImp(k,dailyRows){
   const bar=R(k+'-month-filter-bar');
   bar.innerHTML=`<button class="mf-btn" onclick="setDailyMonth('${k}','all',this)">Tudo</button>`+
     mKeys.map(mk=>{const[y,m]=mk.split('-');const label=MS[+m-1]+'/'+String(+y).slice(2);return`<button class="mf-btn" onclick="setDailyMonth('${k}','${mk}',this)">${label}</button>`;}).join('');
+  // Limites do De/Até = intervalo real dos dados do perfil
+  const allKeys=st.rows.filter(r=>r._pd).map(r=>r._pd.key).sort();
+  if(allKeys.length){const s=R(k+'-df-start'),e=R(k+'-df-end');
+    if(s){s.min=e.min=allKeys[0];s.max=e.max=allKeys[allKeys.length-1];}}
   // default = "Tudo" (mostra todos os meses; assim atualizações de qualquer mês já aparecem)
   const defBtn=bar.querySelector(`[onclick*="'all'"]`)||bar.querySelector('.mf-btn');
   if(defBtn)defBtn.classList.add('active');
