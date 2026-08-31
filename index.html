@@ -87,6 +87,13 @@
     th.sortable{cursor:pointer;user-select:none;transition:color .12s;}
     th.sortable:hover{color:var(--purple);}
     th .sar{font-size:9px;opacity:.9;color:var(--purple);}
+    /* input de edição inline do nº de seguidores na tabela */
+    .seg-inline{width:78px;text-align:right;font-size:13px;font-weight:700;color:var(--purple);
+      background:rgba(139,92,246,.08);border:1px solid transparent;border-radius:7px;padding:5px 8px;
+      font-family:inherit;transition:border-color .12s,background .12s;-moz-appearance:textfield;}
+    .seg-inline:hover{border-color:var(--border);}
+    .seg-inline:focus{outline:none;border-color:var(--purple);background:rgba(139,92,246,.16);}
+    .seg-inline::-webkit-outer-spin-button,.seg-inline::-webkit-inner-spin-button{-webkit-appearance:none;margin:0;}
     .modal-overlay{display:none;position:fixed;inset:0;background:rgba(0,0,0,.75);z-index:1000;align-items:center;justify-content:center;}
     .modal-overlay.open{display:flex;}
     .modal-box{background:var(--card);border:1px solid var(--border);border-radius:16px;padding:28px;width:560px;max-width:95vw;max-height:90vh;overflow-y:auto;}
@@ -281,8 +288,8 @@ function panelHTML(k){
         <span class="tbl-head-title">Rastreamento de Seguidores · Posts Impulsionados</span>
         <div style="display:flex;align-items:center;gap:10px;flex-wrap:wrap">
           <div class="pfilter" id="${k}-pfilter">
-            <button data-f="todos" class="on" onclick="setPostFilter('${k}','todos')">Todos <span id="${k}-pf-c-todos"></span></button>
-            <button data-f="ativo" onclick="setPostFilter('${k}','ativo')">Ativos <span id="${k}-pf-c-ativo"></span></button>
+            <button data-f="todos" onclick="setPostFilter('${k}','todos')">Todos <span id="${k}-pf-c-todos"></span></button>
+            <button data-f="ativo" class="on" onclick="setPostFilter('${k}','ativo')">Ativos <span id="${k}-pf-c-ativo"></span></button>
             <button data-f="inativo" onclick="setPostFilter('${k}','inativo')">Inativos <span id="${k}-pf-c-inativo"></span></button>
             <button data-f="subir" onclick="setPostFilter('${k}','subir')">Subir <span id="${k}-pf-c-subir"></span></button>
           </div>
@@ -600,12 +607,25 @@ function draftAdd(){
   renderPostList();
   autoSave();
 }
-// Filtro de status por perfil (todos | ativo | inativo | subir)
+// Filtro de status por perfil (todos | ativo | inativo | subir). Default = ativo:
+// é o que interessa na hora de atualizar seguidores (os pausados não mudam).
 const _postFilter={};
 function setPostFilter(k,f){
   _postFilter[k]=f;
   document.querySelectorAll('#'+k+'-pfilter button').forEach(b=>b.classList.toggle('on', b.dataset.f===f));
   renderPostsTable(k);
+}
+// Edição inline do nº de seguidores DIRETO na tabela (sem abrir o modal). Salva no
+// servidor com a mesma lógica de auto-save. `idx` é o índice no array completo getPosts.
+function inlineSaveSaldo(k, idx, value){
+  const posts=getPosts(k).map(p=>({...p}));
+  if(!posts[idx]) return;
+  posts[idx].saldo=parseInt(value)||0;
+  setPostsLS(k,posts); P[k].sheetPosts=posts;   // local na hora
+  renderPostsTable(k);
+  showSaveStatus('salvando');
+  clearTimeout(_saveTimer);
+  _saveTimer=setTimeout(()=>cloudSave(k,posts,0),650);
 }
 function renderPostsTable(k){
   const all=getPosts(k);
@@ -615,10 +635,11 @@ function renderPostsTable(k){
   all.forEach(p=>{ const s=st(p); if(cnt[s]!==undefined) cnt[s]++; });
   ['todos','ativo','inativo','subir'].forEach(x=>{ const el=document.getElementById(k+'-pf-c-'+x); if(el) el.textContent='('+cnt[x]+')'; });
   if(all.length===0){R(k+'-s-tbody').innerHTML='<tr><td colspan="6" style="text-align:center;color:var(--sub);padding:20px">Nenhum post cadastrado — clique em "✏️ Gerenciar posts"</td></tr>';return;}
-  const f=_postFilter[k]||'todos';
-  const posts = f==='todos' ? all : all.filter(p=>st(p)===f);
+  const f=_postFilter[k]||'ativo';   // default Ativos: é o que se atualiza no dia a dia
+  // preserva o índice no array COMPLETO (getPosts) — é ele que o inlineSaveSaldo usa
+  const posts = all.map((p,idx)=>({p,idx})).filter(o=> f==='todos' || st(o.p)===f);
   if(posts.length===0){R(k+'-s-tbody').innerHTML='<tr><td colspan="6" class="pf-empty">Nenhum post com esse status.</td></tr>';return;}
-  R(k+'-s-tbody').innerHTML=posts.map(p=>{
+  R(k+'-s-tbody').innerHTML=posts.map(({p,idx})=>{
     const ativo=(p.status||'ativo')==='ativo';
     const cps=p.saldo>0&&p.inv>0?p.inv/p.saldo:0;
     const obsHtml=p.obs?`<br><span style="font-size:10px;color:var(--sub);font-style:italic">${p.obs}</span>`:'';
@@ -628,7 +649,11 @@ function renderPostsTable(k){
           <span class="tnm" style="min-width:0;flex:1" title="${p.nome}">${postName(p.nome)}</span>${statusPillHtml(p.status,false,0)}
         </div>${obsHtml}
       </td>
-      <td class="tr"><strong style="color:var(--purple)">${fmtN(p.saldo)}</strong></td>
+      <td class="tr"><input class="seg-inline" type="number" min="0" value="${p.saldo||0}"
+        title="Editar seguidores — salva sozinho"
+        onchange="inlineSaveSaldo('${k}',${idx},this.value)"
+        onkeydown="if(event.key==='Enter')this.blur()"
+        onclick="this.select()"></td>
       <td class="tr" style="color:var(--green)">+${fmtN(p.saldo)}</td>
       <td class="tr">${fmtR(p.inv)}</td>
       <td class="tr" style="color:var(--cyan)">${cps>0?fmtR(cps):'—'}</td>
