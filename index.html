@@ -94,6 +94,8 @@
     .seg-inline:hover{border-color:var(--border);}
     .seg-inline:focus{outline:none;border-color:var(--purple);background:rgba(139,92,246,.16);}
     .seg-inline::-webkit-outer-spin-button,.seg-inline::-webkit-inner-spin-button{-webkit-appearance:none;margin:0;}
+    .inv-inline{color:var(--text);background:rgba(255,255,255,.04);width:92px;}
+    .inv-inline:focus{border-color:var(--text);background:rgba(255,255,255,.08);}
     .modal-overlay{display:none;position:fixed;inset:0;background:rgba(0,0,0,.75);z-index:1000;align-items:center;justify-content:center;}
     .modal-overlay.open{display:flex;}
     .modal-box{background:var(--card);border:1px solid var(--border);border-radius:16px;padding:28px;width:560px;max-width:95vw;max-height:90vh;overflow-y:auto;}
@@ -615,12 +617,13 @@ function setPostFilter(k,f){
   document.querySelectorAll('#'+k+'-pfilter button').forEach(b=>b.classList.toggle('on', b.dataset.f===f));
   renderPostsTable(k);
 }
-// Edição inline do nº de seguidores DIRETO na tabela (sem abrir o modal). Salva no
-// servidor com a mesma lógica de auto-save. `idx` é o índice no array completo getPosts.
-function inlineSaveSaldo(k, idx, value){
+// Edição inline DIRETO na tabela (sem abrir o modal): seguidores (saldo) e
+// investimento (inv). Salva no servidor com a mesma lógica de auto-save.
+// `idx` é o índice no array completo getPosts.
+function inlineSaveField(k, idx, field, value){
   const posts=getPosts(k).map(p=>({...p}));
   if(!posts[idx]) return;
-  posts[idx].saldo=parseInt(value)||0;
+  posts[idx][field] = field==='inv' ? (parseFloat(value)||0) : (parseInt(value)||0);
   setPostsLS(k,posts); P[k].sheetPosts=posts;   // local na hora
   renderPostsTable(k);
   showSaveStatus('salvando');
@@ -636,7 +639,7 @@ function renderPostsTable(k){
   ['todos','ativo','inativo','subir'].forEach(x=>{ const el=document.getElementById(k+'-pf-c-'+x); if(el) el.textContent='('+cnt[x]+')'; });
   if(all.length===0){R(k+'-s-tbody').innerHTML='<tr><td colspan="6" style="text-align:center;color:var(--sub);padding:20px">Nenhum post cadastrado — clique em "✏️ Gerenciar posts"</td></tr>';return;}
   const f=_postFilter[k]||'ativo';   // default Ativos: é o que se atualiza no dia a dia
-  // preserva o índice no array COMPLETO (getPosts) — é ele que o inlineSaveSaldo usa
+  // preserva o índice no array COMPLETO (getPosts) — é ele que o inlineSaveField usa
   const posts = all.map((p,idx)=>({p,idx})).filter(o=> f==='todos' || st(o.p)===f);
   if(posts.length===0){R(k+'-s-tbody').innerHTML='<tr><td colspan="6" class="pf-empty">Nenhum post com esse status.</td></tr>';return;}
   R(k+'-s-tbody').innerHTML=posts.map(({p,idx})=>{
@@ -651,11 +654,15 @@ function renderPostsTable(k){
       </td>
       <td class="tr"><input class="seg-inline" type="number" min="0" value="${p.saldo||0}"
         title="Editar seguidores — salva sozinho"
-        onchange="inlineSaveSaldo('${k}',${idx},this.value)"
+        onchange="inlineSaveField('${k}',${idx},'saldo',this.value)"
         onkeydown="if(event.key==='Enter')this.blur()"
         onclick="this.select()"></td>
       <td class="tr" style="color:var(--green)">+${fmtN(p.saldo)}</td>
-      <td class="tr">${fmtR(p.inv)}</td>
+      <td class="tr"><input class="seg-inline inv-inline" type="number" min="0" step="0.01" value="${p.inv||0}"
+        title="Editar investimento — salva sozinho"
+        onchange="inlineSaveField('${k}',${idx},'inv',this.value)"
+        onkeydown="if(event.key==='Enter')this.blur()"
+        onclick="this.select()"></td>
       <td class="tr" style="color:var(--cyan)">${cps>0?fmtR(cps):'—'}</td>
       <td>${p.link?`<a href="${p.link}" target="_blank" class="lnk">🔗 Ver post</a>`:'—'}</td>
     </tr>`;
