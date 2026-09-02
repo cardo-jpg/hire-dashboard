@@ -632,6 +632,25 @@ function inlineSaveField(k, idx, field, value){
   clearTimeout(_saveTimer);
   _saveTimer=setTimeout(()=>cloudSave(k,posts,0),650);
 }
+// Troca de status DIRETO na tabela (sem abrir o modal): clique cicla
+// Ativo → Inativo → Subir → Ativo, salvando no servidor.
+function inlineToggleStatus(k, idx){
+  const posts=getPosts(k).map(p=>({...p}));
+  if(!posts[idx]) return;
+  const cycle={ativo:'inativo',inativo:'subir',subir:'ativo'};
+  posts[idx].status=cycle[posts[idx].status||'ativo']||'ativo';
+  setPostsLS(k,posts); P[k].sheetPosts=posts;
+  renderPostsTable(k);
+  showSaveStatus('salvando');
+  clearTimeout(_saveTimer);
+  _saveTimer=setTimeout(()=>cloudSave(k,posts,0),650);
+}
+// Pill de status clicável na tabela (cicla e salva). Reaproveita as classes pill-*.
+function statusPillInline(k, idx, status){
+  const map={ativo:['pill-ativo','Ativo'],inativo:['pill-inativo','Inativo'],subir:['pill-subir','📤 Subir']};
+  const [cls,label]=map[status||'ativo']||map['ativo'];
+  return`<span class="${cls}" style="font-size:10px;padding:3px 10px;cursor:pointer" title="Clique: Ativo → Inativo → Subir" onclick="inlineToggleStatus('${k}',${idx})">${label}</span>`;
+}
 function renderPostsTable(k){
   const all=getPosts(k);
   const st=p=>(p.status||'ativo');
@@ -651,7 +670,7 @@ function renderPostsTable(k){
     return`<tr class="${ativo?'':'inativo'}">
       <td style="max-width:280px">
         <div style="display:flex;align-items:center;gap:6px">
-          <span class="tnm" style="min-width:0;flex:1" title="${p.nome}">${postName(p.nome)}</span>${statusPillHtml(p.status,false,0)}
+          <span class="tnm" style="min-width:0;flex:1" title="${p.nome}">${postName(p.nome)}</span>${statusPillInline(k,idx,p.status)}
         </div>${obsHtml}
       </td>
       <td class="tr"><input class="seg-inline" type="number" min="0" value="${p.saldo||0}"
