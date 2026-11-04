@@ -245,7 +245,8 @@ function parseDailyDate(ddmm){
   const[ds,ms]=ddmm.trim().split('/');
   const d=parseInt(ds),m=parseInt(ms);
   if(!d||!m||m<1||m>12)return null;
-  const year=m>=11?2025:2026;
+  const _now=new Date();const _cy=_now.getFullYear(),_cm=_now.getMonth()+1;
+  const year=m>_cm?_cy-1:_cy;
   const key=`${year}-${String(m).padStart(2,'0')}-${String(d).padStart(2,'0')}`;
   const mKey=`${year}-${String(m).padStart(2,'0')}`;
   return{year,month:m,day:d,key,label:ddmm,mKey};
