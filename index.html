@@ -685,7 +685,7 @@ function renderPostsTable(k){
     const ativo=(p.status||'ativo')==='ativo';
     const cps=p.saldo>0&&p.inv>0?p.inv/p.saldo:0;
     const obsHtml=p.obs?`<br><span style="font-size:10px;color:var(--sub);font-style:italic">${p.obs}</span>`:'';
-    const motivoHtml=(p.status||'ativo')==='inativo'?`<div class="motivo" title="Leitura automática pelos números do post">⏸ Pausado · ${motivoInativo(p,refCPS)}</div>`:'';
+    const motivoHtml=(p.status||'ativo')==='inativo'?`<br><span class="motivo" title="Leitura automática pelos números do post">⏸ Pausado · ${motivoInativo(p,refCPS)}</span>`:'';
     return`<tr class="${ativo?'':'inativo'}">
       <td style="max-width:280px">
         <div style="display:flex;align-items:center;gap:6px">
