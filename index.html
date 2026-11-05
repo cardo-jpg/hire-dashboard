@@ -119,7 +119,8 @@
     .pill-subir{display:inline-block;padding:2px 9px;border-radius:20px;font-size:10px;font-weight:700;background:rgba(255,209,102,.12);color:var(--yellow);user-select:none;border:1px solid rgba(255,209,102,.25);}
     .modal-sep{border:none;border-top:1px solid var(--border);margin:20px 0 16px;}
     .modal-sub{font-size:10px;font-weight:700;color:var(--sub);text-transform:uppercase;letter-spacing:.8px;margin-bottom:14px;}
-    tr.inativo td{opacity:.4;}
+    tr.inativo td{opacity:.62;}
+    .motivo{display:inline-block;margin-top:4px;font-size:10px;font-weight:700;color:var(--red);background:rgba(255,107,107,.12);border:1px solid rgba(255,107,107,.28);padding:2px 8px;border-radius:6px;line-height:1.35;white-space:normal;}
     tr.inativo .tnm::after{content:' (inativo)';font-size:10px;color:var(--red);}
   </style>
 </head>
@@ -646,6 +647,19 @@ function inlineToggleStatus(k, idx){
   clearTimeout(_saveTimer);
   _saveTimer=setTimeout(()=>cloudSave(k,posts,0),650);
 }
+// Motivo da inativação, lido automaticamente pelos números do próprio post
+// (gasto, seguidores e CPS). ref = CPS médio dos posts (ponderado) p/ comparar.
+function motivoInativo(p, ref){
+  const inv=+p.inv||0, seg=+p.saldo||0, cps=seg>0?inv/seg:0;
+  if(inv>0 && seg===0)  return `gastou ${fmtR(inv)} e não trouxe seguidor`;
+  if(inv<10 && seg<=1)  return `teste curto · ${fmtR(inv)} em ${seg} seguidor${seg===1?'':'es'}`;
+  if(cps>0 && cps>=Math.max(ref*3,5)){
+    const x = ref>0 ? ` · ${Math.round(cps/ref)}× a média (${fmtR(ref)})` : '';
+    return `CPS alto · ${fmtR(cps)}/seguidor${x}`;
+  }
+  if(cps>0)             return `gastou ${fmtR(inv)} · ${fmtR(cps)}/seguidor`;
+  return `sem dados de custo`;
+}
 // Pill de status clicável na tabela (cicla e salva). Reaproveita as classes pill-*.
 function statusPillInline(k, idx, status){
   const map={ativo:['pill-ativo','Ativo'],inativo:['pill-inativo','Inativo'],subir:['pill-subir','📤 Subir']};
@@ -664,15 +678,19 @@ function renderPostsTable(k){
   // preserva o índice no array COMPLETO (getPosts) — é ele que o inlineSaveField usa
   const posts = all.map((p,idx)=>({p,idx})).filter(o=> f==='todos' || st(o.p)===f);
   if(posts.length===0){R(k+'-s-tbody').innerHTML='<tr><td colspan="6" class="pf-empty">Nenhum post com esse status.</td></tr>';return;}
+  // Referência de CPS = média ponderada dos posts ATIVOS (o padrão que mantivemos).
+  let _rI=0,_rS=0; all.forEach(p=>{ if((p.status||'ativo')==='ativo'){ const s=+p.saldo||0; if(s>0){ _rI+=+p.inv||0; _rS+=s; } } });
+  const refCPS=_rS>0?_rI/_rS:0;
   R(k+'-s-tbody').innerHTML=posts.map(({p,idx})=>{
     const ativo=(p.status||'ativo')==='ativo';
     const cps=p.saldo>0&&p.inv>0?p.inv/p.saldo:0;
     const obsHtml=p.obs?`<br><span style="font-size:10px;color:var(--sub);font-style:italic">${p.obs}</span>`:'';
+    const motivoHtml=ativo?'':`<div class="motivo" title="Leitura automática pelos números do post">⏸ Pausado · ${motivoInativo(p,refCPS)}</div>`;
     return`<tr class="${ativo?'':'inativo'}">
       <td style="max-width:280px">
         <div style="display:flex;align-items:center;gap:6px">
           <span class="tnm" style="min-width:0;flex:1" title="${p.nome}">${postName(p.nome)}</span>${statusPillInline(k,idx,p.status)}
-        </div>${obsHtml}
+        </div>${obsHtml}${motivoHtml}
       </td>
       <td class="tr"><input class="seg-inline" type="number" min="0" value="${p.saldo||0}"
         title="Editar seguidores — salva sozinho"
