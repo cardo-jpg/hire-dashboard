@@ -117,6 +117,7 @@
     .pill-ativo{display:inline-block;padding:2px 9px;border-radius:20px;font-size:10px;font-weight:700;background:rgba(0,229,160,.12);color:var(--green);user-select:none;border:1px solid rgba(0,229,160,.25);}
     .pill-inativo{display:inline-block;padding:2px 9px;border-radius:20px;font-size:10px;font-weight:700;background:rgba(255,107,107,.1);color:var(--red);user-select:none;border:1px solid rgba(255,107,107,.2);}
     .pill-subir{display:inline-block;padding:2px 9px;border-radius:20px;font-size:10px;font-weight:700;background:rgba(255,209,102,.12);color:var(--yellow);user-select:none;border:1px solid rgba(255,209,102,.25);}
+    .pill-reserva{display:inline-block;padding:2px 9px;border-radius:20px;font-size:10px;font-weight:700;background:rgba(0,198,255,.12);color:#00c6ff;user-select:none;border:1px solid rgba(0,198,255,.28);}
     .modal-sep{border:none;border-top:1px solid var(--border);margin:20px 0 16px;}
     .modal-sub{font-size:10px;font-weight:700;color:var(--sub);text-transform:uppercase;letter-spacing:.8px;margin-bottom:14px;}
     tr.inativo td{opacity:.62;}
@@ -179,6 +180,7 @@
         <option value="ativo">Ativo</option>
         <option value="inativo">Inativo</option>
         <option value="subir">Subir</option>
+        <option value="reserva">Reserva</option>
       </select>
     </div>
     <div style="display:flex;gap:10px;margin-top:8px">
@@ -298,6 +300,7 @@ function panelHTML(k){
             <button data-f="ativo" class="on" onclick="setPostFilter('${k}','ativo')">Ativos <span id="${k}-pf-c-ativo"></span></button>
             <button data-f="inativo" onclick="setPostFilter('${k}','inativo')">Inativos <span id="${k}-pf-c-inativo"></span></button>
             <button data-f="subir" onclick="setPostFilter('${k}','subir')">Subir <span id="${k}-pf-c-subir"></span></button>
+            <button data-f="reserva" onclick="setPostFilter('${k}','reserva')">Reserva <span id="${k}-pf-c-reserva"></span></button>
           </div>
           <button class="btn-edit-posts" onclick="openPostsModal('${k}')">✏️ Gerenciar posts</button>
         </div>
@@ -565,12 +568,12 @@ function draftEditField(i,f,v){
   autoSave();
 }
 function statusPillHtml(status,clickable,idx){
-  const map={ativo:['pill-ativo','Ativo'],inativo:['pill-inativo','Inativo'],subir:['pill-subir','📤 Subir']};
+  const map={ativo:['pill-ativo','Ativo'],inativo:['pill-inativo','Inativo'],subir:['pill-subir','📤 Subir'],reserva:['pill-reserva','🗂️ Reserva']};
   const[cls,label]=map[status||'ativo']||map['ativo'];
   const onclick=clickable?`onclick="draftToggle(${idx})" title="Clique para alternar"`:'';
   return`<span class="${cls}" style="font-size:10px;padding:2px 9px;cursor:${clickable?'pointer':'default'}" ${onclick}>${label}</span>`;
 }
-function draftToggle(i){const cycle={ativo:'inativo',inativo:'subir',subir:'ativo'};_draft[i].status=cycle[_draft[i].status||'ativo']||'ativo';renderPostList();autoSave();}
+function draftToggle(i){const cycle={ativo:'inativo',inativo:'subir',subir:'reserva',reserva:'ativo'};_draft[i].status=cycle[_draft[i].status||'ativo']||'ativo';renderPostList();autoSave();}
 function renderPostList(){
   if(!_draft)return;
   const esc=s=>(s||'').toString().replace(/"/g,'&quot;');
@@ -639,7 +642,7 @@ function inlineSaveField(k, idx, field, value){
 function inlineToggleStatus(k, idx){
   const posts=getPosts(k).map(p=>({...p}));
   if(!posts[idx]) return;
-  const cycle={ativo:'inativo',inativo:'subir',subir:'ativo'};
+  const cycle={ativo:'inativo',inativo:'subir',subir:'reserva',reserva:'ativo'};
   posts[idx].status=cycle[posts[idx].status||'ativo']||'ativo';
   setPostsLS(k,posts); P[k].sheetPosts=posts;
   renderPostsTable(k);
@@ -662,17 +665,17 @@ function motivoInativo(p, ref){
 }
 // Pill de status clicável na tabela (cicla e salva). Reaproveita as classes pill-*.
 function statusPillInline(k, idx, status){
-  const map={ativo:['pill-ativo','Ativo'],inativo:['pill-inativo','Inativo'],subir:['pill-subir','📤 Subir']};
+  const map={ativo:['pill-ativo','Ativo'],inativo:['pill-inativo','Inativo'],subir:['pill-subir','📤 Subir'],reserva:['pill-reserva','🗂️ Reserva']};
   const [cls,label]=map[status||'ativo']||map['ativo'];
-  return`<span class="${cls}" style="font-size:10px;padding:3px 10px;cursor:pointer" title="Clique: Ativo → Inativo → Subir" onclick="inlineToggleStatus('${k}',${idx})">${label}</span>`;
+  return`<span class="${cls}" style="font-size:10px;padding:3px 10px;cursor:pointer" title="Clique: Ativo → Inativo → Subir → Reserva" onclick="inlineToggleStatus('${k}',${idx})">${label}</span>`;
 }
 function renderPostsTable(k){
   const all=getPosts(k);
   const st=p=>(p.status||'ativo');
   // contadores nos botões
-  const cnt={todos:all.length,ativo:0,inativo:0,subir:0};
+  const cnt={todos:all.length,ativo:0,inativo:0,subir:0,reserva:0};
   all.forEach(p=>{ const s=st(p); if(cnt[s]!==undefined) cnt[s]++; });
-  ['todos','ativo','inativo','subir'].forEach(x=>{ const el=document.getElementById(k+'-pf-c-'+x); if(el) el.textContent='('+cnt[x]+')'; });
+  ['todos','ativo','inativo','subir','reserva'].forEach(x=>{ const el=document.getElementById(k+'-pf-c-'+x); if(el) el.textContent='('+cnt[x]+')'; });
   if(all.length===0){R(k+'-s-tbody').innerHTML='<tr><td colspan="6" style="text-align:center;color:var(--sub);padding:20px">Nenhum post cadastrado — clique em "✏️ Gerenciar posts"</td></tr>';return;}
   const f=_postFilter[k]||'ativo';   // default Ativos: é o que se atualiza no dia a dia
   // preserva o índice no array COMPLETO (getPosts) — é ele que o inlineSaveField usa
